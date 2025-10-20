@@ -1,21 +1,15 @@
 import { auth } from "@/lib/auth";
 import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
-import { z } from "zod";
+import { streamText, convertToModelMessages } from "ai";
 
-const messageSchema = z.object({
-  messages: z.array(z.object({
-    id: z.string(),
-    role: z.enum(['user', 'assistant', 'system']),
-    content: z.string(),
-  })),
-});
+// Allow streaming responses up to 30 seconds
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
     // Get session from better-auth
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const session = await auth.api.getSession({
+      headers: request.headers
     });
 
     // Check if user is authenticated
@@ -23,30 +17,25 @@ export async function POST(request: Request) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    // Parse and validate request body
-    const body = await request.json();
-    const validation = messageSchema.safeParse(body);
-    
-    if (!validation.success) {
-      return new Response('Invalid request format', { status: 400 });
-    }
+    // Get model from header
+    const modelId = request.headers.get('X-Model') || 'gpt-4o-mini';
 
-    const { messages } = validation.data;
+    // Parse request body
+    const { messages } = await request.json();
 
     // Check for API key
     if (!process.env.OPENAI_API_KEY) {
       return new Response('OpenAI API key not configured', { status: 500 });
     }
 
-    // Create streaming response using AI SDK
+    // Create streaming response using AI SDK with selected model
     const result = streamText({
-      model: openai('gpt-4o-mini'),
-      messages: messages,
+      model: openai(modelId),
+      messages: convertToModelMessages(messages),
       temperature: 0.7,
-      maxTokens: 2000,
     });
 
-    return result.toDataStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('Chat API error:', error);
     

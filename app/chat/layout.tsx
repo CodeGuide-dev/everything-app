@@ -5,7 +5,8 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
+
+import { ChatLayoutClient } from "./chat-layout-client"
 
 import "@/app/dashboard/theme.css"
 
@@ -28,8 +29,7 @@ export default async function ChatLayout({
     >
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <ChatLayoutClient>{children}</ChatLayoutClient>
       </SidebarInset>
     </SidebarProvider>
   )
