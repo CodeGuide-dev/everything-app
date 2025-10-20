@@ -7,11 +7,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ChatSessionManager } from "@/components/chat-session-manager"
 
 import { useChatModel } from "./chat-model-context"
-import { useChatPersistence } from "./chat-persistence-context"
 
 export function ChatHeader() {
-  const { selectedModelConfig } = useChatModel()
-  const { currentSessionId, setCurrentSessionId } = useChatPersistence()
+  const { selectedModelConfig, sessionId, setSessionId } = useChatModel()
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -36,8 +34,8 @@ export function ChatHeader() {
         </div>
         <div className="ml-auto">
           <ChatSessionManager
-            currentSessionId={currentSessionId}
-            onSessionChange={setCurrentSessionId}
+            currentSessionId={sessionId}
+            onSessionChange={setSessionId}
           />
         </div>
       </div>

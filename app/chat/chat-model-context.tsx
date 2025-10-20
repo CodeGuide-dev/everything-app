@@ -8,6 +8,8 @@ interface ChatModelContextValue {
   selectedModel: string
   setSelectedModel: (modelId: string) => void
   selectedModelConfig?: ModelConfig
+  sessionId: string | null
+  setSessionId: (sessionId: string | null) => void
 }
 
 const ChatModelContext = createContext<ChatModelContextValue | undefined>(
@@ -20,6 +22,7 @@ export function ChatModelProvider({
   children: React.ReactNode
 }) {
   const [selectedModel, setSelectedModel] = useState("gpt-4o-mini")
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
   const selectedModelConfig = useMemo(
     () => AVAILABLE_MODELS.find((model) => model.id === selectedModel),
@@ -27,8 +30,8 @@ export function ChatModelProvider({
   )
 
   const value = useMemo(
-    () => ({ selectedModel, setSelectedModel, selectedModelConfig }),
-    [selectedModel, selectedModelConfig]
+    () => ({ selectedModel, setSelectedModel, selectedModelConfig, sessionId, setSessionId }),
+    [selectedModel, selectedModelConfig, sessionId]
   )
 
   return (

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db, chatMessages, chatSessions } from "@/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 
 const createMessageSchema = z.object({
@@ -11,7 +11,7 @@ const createMessageSchema = z.object({
   apiKeyId: z.string().uuid().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 const getMessagesSchema = z.object({
@@ -32,13 +32,35 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url);
-    const queryParams = {
-      sessionId: url.searchParams.get("sessionId"),
+    const sessionIdParam = url.searchParams.get("sessionId");
+
+    console.log("GET /api/chat/messages - Raw params:", {
+      sessionId: sessionIdParam,
       limit: url.searchParams.get("limit"),
       offset: url.searchParams.get("offset"),
+    });
+
+    const queryParams = {
+      sessionId: sessionIdParam || undefined,
+      limit: url.searchParams.get("limit") || undefined,
+      offset: url.searchParams.get("offset") || undefined,
     };
 
-    const { sessionId, limit = 50, offset = 0 } = getMessagesSchema.parse(queryParams);
+    const validation = getMessagesSchema.safeParse(queryParams);
+
+    if (!validation.success) {
+      const zodError = validation.error;
+      console.error("Message query validation failed:", {
+        queryParams,
+        errors: zodError.issues
+      });
+      return NextResponse.json(
+        { error: "Invalid input", details: zodError.issues },
+        { status: 400 }
+      );
+    }
+
+    const { sessionId, limit = 50, offset = 0 } = validation.data;
 
     // Verify session belongs to user
     const [sessionExists] = await db
@@ -81,7 +103,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input", details: error.errors },
+        { error: "Invalid input", details: error.issues },
         { status: 400 }
       );
     }
@@ -156,14 +178,14 @@ export async function POST(request: NextRequest) {
       .set({ updatedAt: new Date() })
       .where(eq(chatSessions.id, sessionId));
 
-    return NextResponse.json({ 
-      message: "Message saved successfully", 
-      chatMessage: newMessage 
+    return NextResponse.json({
+      message: "Message saved successfully",
+      chatMessage: newMessage
     }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Invalid input", details: error.errors },
+        { error: "Invalid input", details: error.issues },
         { status: 400 }
       );
     }
