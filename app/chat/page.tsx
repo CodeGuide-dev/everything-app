@@ -3,19 +3,21 @@
 import { useSession } from "@/lib/auth-client"
 import { redirect } from "next/navigation"
 import { IconLoader2 } from "@tabler/icons-react"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { DefaultChatTransport } from "ai"
-import { AssistantRuntimeProvider } from "@assistant-ui/react"
+import { AssistantRuntimeProvider, useAssistantRuntime } from "@assistant-ui/react"
 import { useChatRuntime } from "@assistant-ui/react-ai-sdk"
 import { Thread } from "@/components/assistant-ui/thread"
 import { VisionImageAdapter } from "@/lib/attachment-adapter"
 import { Card } from "@/components/ui/card"
 
 import { useChatModel } from "./chat-model-context"
+import { useChatPersistence } from "./chat-persistence-context"
 
 export default function ChatPage() {
   const { data: session, isPending } = useSession()
   const { selectedModel } = useChatModel()
+  const { currentSessionId, selectedApiKeyId } = useChatPersistence()
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -32,11 +34,54 @@ export default function ChatPage() {
       headers: {
         'X-Model': selectedModel,
       },
+      body: {
+        sessionId: currentSessionId,
+        apiKeyId: selectedApiKeyId,
+      },
     }),
     adapters: {
       attachments: attachmentAdapter,
     },
   })
+
+  // Load messages when session changes
+  useEffect(() => {
+    if (!currentSessionId) {
+      // Clear messages for new chat
+      runtime.resetMessages();
+      return;
+    }
+
+    // Load messages for the selected session
+    const loadMessages = async () => {
+      try {
+        const response = await fetch(`/api/chat/messages?sessionId=${currentSessionId}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const messages = data.messages || [];
+
+        // Convert database messages to assistant-ui format
+        const convertedMessages = messages.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role,
+          content: [{ type: "text", text: msg.content }],
+        }));
+
+        // Replace runtime messages with loaded messages
+        if (convertedMessages.length > 0) {
+          runtime.resetMessages();
+          for (const message of convertedMessages) {
+            runtime.appendMessage(message);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load chat messages:", error);
+      }
+    };
+
+    loadMessages();
+  }, [currentSessionId, runtime]);
 
   // Show loading state while checking authentication
   if (isPending) {

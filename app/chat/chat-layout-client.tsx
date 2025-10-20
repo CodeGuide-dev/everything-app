@@ -2,6 +2,7 @@
 
 import { ChatHeader } from "./chat-header"
 import { ChatModelProvider } from "./chat-model-context"
+import { ChatPersistenceProvider } from "./chat-persistence-context"
 
 export function ChatLayoutClient({
   children,
@@ -10,8 +11,10 @@ export function ChatLayoutClient({
 }) {
   return (
     <ChatModelProvider>
-      <ChatHeader />
-      <div className="flex flex-1 flex-col">{children}</div>
+      <ChatPersistenceProvider>
+        <ChatHeader />
+        <div className="flex flex-1 flex-col">{children}</div>
+      </ChatPersistenceProvider>
     </ChatModelProvider>
   )
 }
