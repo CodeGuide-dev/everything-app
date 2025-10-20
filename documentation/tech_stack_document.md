@@ -1,90 +1,147 @@
-# Tech Stack Document
+# Tech Stack Document for everything-app
 
-This document explains the key technologies chosen for the **codeguide-starter** project. It’s written in everyday language so anyone—technical or not—can understand why each tool was picked and how it supports the application.
+This document outlines the key technology choices behind **everything-app**, explaining in simple terms how each part fits together and why it was selected. By the end, you should have a clear understanding of how the application is built, how it works, and what makes it reliable and easy to maintain.
 
 ## 1. Frontend Technologies
-The frontend is everything the user sees and interacts with. For this project, we’ve used:
 
-- **Next.js (App Router)**
-  - A React framework that makes page routing, server-side rendering, and API routes very simple.
-  - Enhances user experience by pre-rendering pages on the server or at build time, leading to faster initial load.
-- **React 18**
-  - The underlying library for building user interfaces with reusable components.
-  - Provides a smooth, interactive experience thanks to its virtual DOM and modern hooks.
-- **TypeScript**
-  - A superset of JavaScript that adds types (labels for data).
-  - Helps catch errors early during development and makes the code easier to maintain.
-- **CSS (globals.css & theme.css)**
-  - **globals.css** applies base styles (fonts, colors, resets) across the entire app.
-  - **dashboard/theme.css** defines the look and feel specific to the dashboard area.
-  - This separation keeps styles organized and avoids accidental style conflicts.
+Our frontend is the part of the application that users interact with directly. We chose these tools to provide a smooth, responsive, and visually consistent experience:
 
-By combining these tools, we have a clear structure (Next.js folders for pages and layouts), safer code (TypeScript), and flexible styling with vanilla CSS.
+- **Next.js**  
+  A React-based framework that offers file-based routing (simple URL-to-page mapping) and server-side rendering for faster page loads.
+
+- **React**  
+  A popular library for building dynamic user interfaces in a component-based way.
+
+- **TypeScript**  
+  A superset of JavaScript that adds type checking. This helps catch errors early and makes the code easier to understand.
+
+- **shadcn/ui**  
+  A collection of accessible, pre-styled UI components that speed up development while ensuring consistency.
+
+- **Tailwind CSS**  
+  A utility-first styling tool that allows us to rapidly design and tweak layouts, colors, and spacing.
+
+- **assistant-ui**  
+  A specialized component library built on React, shadcn/ui, and Tailwind CSS, designed for chat interactions. It provides ready-made chat windows, message bubbles, and input fields, so we can focus on AI logic instead of reinventing the wheel.
+
+How these choices enhance the experience:
+
+- Consistent look and feel across the app.  
+- Faster page loads thanks to server-side rendering.  
+- Type safety to reduce runtime errors.  
+- Modular components that are easy to reuse and customize.
 
 ## 2. Backend Technologies
-The backend handles data, user accounts, and the logic behind the scenes. Our choices here are:
 
-- **Next.js API Routes**
-  - Allows us to write server-side code (`route.ts` files) alongside our frontend in the same project.
-  - Runs on Node.js, so we can handle requests like sign-up, sign-in, and data fetching in one place.
-- **Node.js Runtime**
-  - The JavaScript environment on the server that executes our API routes.
-- **bcrypt** (npm package)
-  - A library for hashing passwords securely before storing them.
-  - Ensures that even if someone got access to our data, raw passwords aren’t visible.
-- **(Optional) NextAuth.js or JWT**
-  - While this starter kit shows a custom authentication flow, it can easily integrate services like NextAuth.js for email-based login or JWT (JSON Web Tokens) for stateless sessions.
+The backend powers our features behind the scenes—handling data storage, authentication, and communication with AI models:
 
-These components work together to receive user credentials, verify or store them securely, manage sessions or tokens, and deliver protected data back to the frontend.
+- **Next.js API Routes**  
+  Built-in serverless functions that let us define endpoints (like `/api/chat`) without setting up a separate server.
+
+- **Vercel’s @ai-sdk**  
+  A library that connects to AI models (for chat, search, or image generation) and handles streaming responses.
+
+- **better-auth**  
+  An authentication library that manages sign-up, sign-in, sessions, and protected routes, ensuring each user’s data stays private.
+
+- **Drizzle ORM**  
+  A type-safe ORM (Object-Relational Mapping) for interacting with a PostgreSQL database. It simplifies queries and migrations while keeping our data models in sync.
+
+- **PostgreSQL**  
+  A reliable, open-source database used to store chat threads, messages, user settings, and future search or image records.
+
+- **Zod**  
+  A schema validation library used to check environment variables, API inputs, and database records, preventing malformed data from causing issues.
+
+Together, these components:
+
+- Securely authenticate users and lock down data access.  
+- Store and retrieve conversation histories and user preferences in a structured way.  
+- Seamlessly connect to AI services for live chat, search insights, or image results.
 
 ## 3. Infrastructure and Deployment
-Infrastructure covers where and how we host the app, as well as how changes get delivered:
 
-- **Git & GitHub**
-  - Version control system (Git) and remote hosting (GitHub) keep track of all code changes and allow team collaboration.
-- **Vercel (or Netlify)**
-  - A popular hosting service optimized for Next.js, with one-click deployments and global content delivery.
-  - Automatically rebuilds and deploys the site whenever code is pushed to the main branch.
-- **GitHub Actions (CI/CD)**
-  - Automates tasks like linting (ESLint), formatting (Prettier), and running any tests you add.
-  - Ensures that only clean, tested code goes live.
+Our infrastructure choices ensure that everything-app can be deployed easily, scales with demand, and stays maintainable:
 
-Together, these tools provide a reliable, scalable setup where every code change is tested and deployed quickly, with minimal manual work.
+- **Vercel**  
+  The main hosting platform—optimally tuned for Next.js apps. It handles build, deployment, and global CDN delivery.
+
+- **Docker**  
+  Containers that bundle the app and its dependencies into a consistent environment, making local development mirror production.
+
+- **Git & GitHub**  
+  Version control system and repository hosting for tracking code changes, collaborating in teams, and rolling back if needed.
+
+- **GitHub Actions**  
+  Automated workflows for testing, linting, and deploying code whenever changes are pushed.
+
+- **ESLint & Prettier**  
+  Tools that enforce code style and catch common issues, keeping the codebase clean and consistent.
+
+These choices deliver:
+
+- One-click deployments and automatic previews on every pull request.  
+- Consistent development environments for all team members.  
+- Automated checks that spot errors before they reach production.
 
 ## 4. Third-Party Integrations
-While this starter kit is minimal by design, it already includes or can easily add:
 
-- **bcrypt**
-  - For secure password hashing (included as an npm dependency).
-- **NextAuth.js** (optional)
-  - A full-featured authentication library supporting email/password, OAuth, and more.
-- **Sentry or LogRocket** (optional)
-  - For real-time error tracking and performance monitoring in production.
+We rely on a few external services and libraries to add powerful functionality without building everything from scratch:
 
-These integrations help extend the app’s capabilities without building every feature from scratch.
+- **@ai-sdk (Vercel)**  
+  Provides unified access to language models and handles streaming responses for chat and search.
+
+- **assistant-ui**  
+  Pre-built UI components for chat interfaces, reducing custom design work.
+
+- **Nano Banana (Google image model)**  
+  Planned integration for high-quality AI image generation based on text prompts.
+
+- **OpenAI & Google API Keys**  
+  Managed via environment variables to securely connect to each provider’s AI services.
+
+- **Inngest (Future)**  
+  A background job processor for offloading long-running tasks (like generating large images) so users don’t hit function timeouts.
+
+These integrations:
+
+- Accelerate development by providing battle-tested features.  
+- Allow us to tap into cutting-edge AI without hosting large models ourselves.  
+- Give a clear upgrade path for new AI capabilities in the future.
 
 ## 5. Security and Performance Considerations
-We’ve baked in several measures to keep users safe and the app running smoothly:
 
-Security:
-- Passwords are never stored in plain text—bcrypt hashes them with a random salt.
-- API routes can implement CSRF protection and input validation to block malicious requests.
-- Session tokens or cookies are marked secure and HttpOnly to prevent theft via JavaScript.
+To keep users’ data safe and the app snappy, we’ve built in several safeguards and optimizations:
 
-Performance:
-- Server-side rendering (SSR) and static site generation (SSG) in Next.js deliver pages faster.
-- Code splitting and lazy-loaded components ensure users only download what they need.
-- Global CSS and theme files are small and cached by the browser for quick repeat visits.
+- **Authentication & Access Control**  
+  Every protected page and API endpoint checks user sessions via better-auth.
 
-These strategies work together to give users a fast, secure experience every time.
+- **Input Validation**  
+  Zod schemas ensure that API calls include the right data types and values, preventing malicious or malformed requests.
+
+- **Environment Variable Validation**  
+  Zod also checks required API keys and settings on startup, so missing or incorrect configs fail fast.
+
+- **Secure Data Storage**  
+  PostgreSQL access is locked down, and sensitive fields (like API keys) never leave the server.
+
+- **Error Handling & User Feedback**  
+  Friendly messages in the UI guide users if AI services hit rate limits or time out.
+
+- **Caching & CDN Delivery**  
+  Static assets and pages are cached at the edge via Vercel’s CDN for faster load times worldwide.
+
+- **Code Splitting & Lazy Loading**  
+  Next.js automatically splits code by page and only loads what’s needed, reducing initial load size.
 
 ## 6. Conclusion and Overall Tech Stack Summary
-In building **codeguide-starter**, we chose technologies that:
 
-- Align with modern web standards (Next.js, React, TypeScript).
-- Provide a clear, file-based project structure for rapid onboarding.
-- Offer built-in support for server-side rendering, API routes, and static assets.
-- Emphasize security through password hashing, session management, and safe defaults.
-- Enable easy scaling and future enhancements via modular code and optional integrations.
+In summary, the **everything-app** stack is designed to be:
 
-This stack strikes a balance between simplicity for newcomers and flexibility for experienced teams. It accelerates development of a secure authentication flow and a polished dashboard, while leaving room to plug in databases, test suites, and advanced features as the project grows.
+- **User-Centric**: A modern, responsive UI powered by Next.js, React, and Tailwind CSS.  
+- **Developer-Friendly**: TypeScript, Prettier, and ESLint keep the code clear and error-free.  
+- **Data-Safe**: better-auth and Zod guard user data and configuration.  
+- **Scalable & Flexible**: Vercel and Docker ensure smooth deployments; Drizzle ORM and PostgreSQL handle growing data needs.  
+- **AI-Ready**: With @ai-sdk, assistant-ui, and planned integrations like Nano Banana and Inngest, it’s easy to add chat, search, and image features without major rewrites.
+
+This combination of technologies aligns with our goal of building a reliable, easy-to-maintain “super app” that brings AI chat, search insights, and image generation into one seamless experience. By leveraging both established frameworks and specialized AI tools, we’ve created a foundation that’s both powerful today and ready for whatever capabilities we add tomorrow.

@@ -15,6 +15,7 @@ import {
   IconFolder,
   IconHelp,
   IconListDetails,
+  IconMessageChatbot,
   IconReport,
   IconSearch,
   IconSettings,
@@ -39,8 +40,13 @@ const staticData = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: IconDashboard,
+    },
+    {
+      title: "AI Chat",
+      url: "/chat",
+      icon: IconMessageChatbot,
     },
     {
       title: "Lifecycle",

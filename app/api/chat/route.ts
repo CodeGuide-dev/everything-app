@@ -1,0 +1,65 @@
+import { auth } from "@/lib/auth";
+import { openai } from "@ai-sdk/openai";
+import { streamText } from "ai";
+import { z } from "zod";
+
+const messageSchema = z.object({
+  messages: z.array(z.object({
+    id: z.string(),
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string(),
+  })),
+});
+
+export async function POST(request: Request) {
+  try {
+    // Get session from better-auth
+    const session = await auth.api.getSession({ 
+      headers: request.headers 
+    });
+
+    // Check if user is authenticated
+    if (!session || !session.user) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validation = messageSchema.safeParse(body);
+    
+    if (!validation.success) {
+      return new Response('Invalid request format', { status: 400 });
+    }
+
+    const { messages } = validation.data;
+
+    // Check for API key
+    if (!process.env.OPENAI_API_KEY) {
+      return new Response('OpenAI API key not configured', { status: 500 });
+    }
+
+    // Create streaming response using AI SDK
+    const result = streamText({
+      model: openai('gpt-4o-mini'),
+      messages: messages,
+      temperature: 0.7,
+      maxTokens: 2000,
+    });
+
+    return result.toDataStreamResponse();
+  } catch (error) {
+    console.error('Chat API error:', error);
+    
+    // Handle specific error types
+    if (error instanceof Error) {
+      if (error.message.includes('rate limit')) {
+        return new Response('Rate limit exceeded. Please try again later.', { status: 429 });
+      }
+      if (error.message.includes('quota')) {
+        return new Response('API quota exceeded. Please check your OpenAI billing.', { status: 402 });
+      }
+    }
+    
+    return new Response('Internal server error', { status: 500 });
+  }
+}
