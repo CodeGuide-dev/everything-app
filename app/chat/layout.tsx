@@ -21,6 +21,7 @@ export default async function ChatLayout({
   return (
     <SidebarProvider
       defaultOpen={defaultOpen}
+      className="h-dvh"
       style={
         {
           "--sidebar-width": "calc(var(--spacing) * 72)",
@@ -28,7 +29,7 @@ export default async function ChatLayout({
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
+      <SidebarInset className="h-full pb-4">
         <ChatLayoutClient>{children}</ChatLayoutClient>
       </SidebarInset>
     </SidebarProvider>

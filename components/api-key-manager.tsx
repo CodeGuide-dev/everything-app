@@ -53,7 +53,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KeyIcon, PlusIcon, TrashIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { toast } from "sonner";
-import { SUPPORTED_PROVIDERS } from "@/lib/api-keys";
+import { SUPPORTED_PROVIDERS } from "@/lib/api-keys-constants";
 
 const addApiKeySchema = z.object({
   provider: z.enum(["openai", "anthropic", "google", "cohere", "mistral"]),

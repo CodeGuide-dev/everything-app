@@ -13,7 +13,7 @@ export function ChatLayoutClient({
     <ChatModelProvider>
       <ChatPersistenceProvider>
         <ChatHeader />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col min-h-0 h-full">{children}</div>
       </ChatPersistenceProvider>
     </ChatModelProvider>
   )
