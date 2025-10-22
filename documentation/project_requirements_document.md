@@ -1,3 +1,5 @@
+# Project Requirements Document
+
 # Project Requirements Document (PRD)
 
 ## 1. Project Overview
@@ -113,3 +115,13 @@ To start a new chat, the user clicks “Chat” in the sidebar. They land on `/c
 
 
 **End of PRD**
+
+---
+**Document Details**
+- **Project ID**: 30dd46ec-a9b4-4813-8faa-cc3644b9ca90
+- **Document ID**: 7499ac07-3347-461b-b6db-ac939c8687b4
+- **Type**: custom
+- **Custom Type**: project_requirements_document
+- **Status**: completed
+- **Generated On**: 2025-10-20T04:04:12.508Z
+- **Last Updated**: N/A

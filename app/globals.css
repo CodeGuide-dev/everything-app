@@ -77,6 +77,15 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  /* Additional color variables for aurora background utility */
+  --blue-500: #3b82f6;
+  --indigo-300: #a5b4fc;
+  --blue-300: #93c5fd;
+  --violet-200: #ddd6fe;
+  --blue-400: #60a5fa;
+  --white: #ffffff;
+  --black: #000000;
+  --transparent: transparent;
 }
 
 .dark {
@@ -120,4 +129,18 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Utilities for Aurora background animation */
+@keyframes aurora {
+  from {
+    background-position: 50% 50%, 50% 50%;
+  }
+  to {
+    background-position: 350% 50%, 350% 50%;
+  }
+}
+
+@utility animate-aurora {
+  animation: aurora 60s linear infinite;
 }

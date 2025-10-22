@@ -1,3 +1,5 @@
+# Security Guideline Document
+
 # Security Guidelines for everything-app
 
 This document outlines the security principles and best practices tailored to the **everything-app** repository—a Next.js full-stack starter template integrating AI Chat, AI Search, and AI Image Generation. By embedding security from design through deployment, you will build a resilient, trustworthy platform.
@@ -159,3 +161,13 @@ This document outlines the security principles and best practices tailored to th
 By following these guidelines, the **everything-app** will achieve a robust security posture, safeguarding both your infrastructure and your users’ data as you build out powerful AI features.
 
 *Last updated: 2024-06-XX*
+
+---
+**Document Details**
+- **Project ID**: 30dd46ec-a9b4-4813-8faa-cc3644b9ca90
+- **Document ID**: 7cb1dab8-ddbe-4285-8603-b93543705da0
+- **Type**: custom
+- **Custom Type**: security_guideline_document
+- **Status**: completed
+- **Generated On**: 2025-10-20T04:06:13.440Z
+- **Last Updated**: N/A
