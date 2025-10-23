@@ -8,6 +8,7 @@ import {
 import { useState, useEffect, useCallback } from "react";
 import { useChatModel } from "./chat-model-context";
 import { useChatSearch } from "./chat-search-context";
+import { cacheMessageSources, clearSourcesCache } from "./use-message-sources";
 
 const convertMessage = (message: ThreadMessageLike) => {
   return message;
@@ -18,6 +19,18 @@ interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
+  sources?: Array<{
+    id: string;
+    url: string;
+    title: string;
+    faviconUrl?: string | null;
+    snippet?: string | null;
+  }>;
+}
+
+// Extend ThreadMessageLike to include messageId for tracking
+interface ExtendedThreadMessage extends ThreadMessageLike {
+  messageId?: string;
 }
 
 export function ChatRuntimeProvider({
@@ -27,7 +40,7 @@ export function ChatRuntimeProvider({
 }>) {
   const { selectedModel, sessionId, setSessionId } = useChatModel();
   const { useSearch } = useChatSearch();
-  const [messages, setMessages] = useState<readonly ThreadMessageLike[]>([]);
+  const [messages, setMessages] = useState<readonly ExtendedThreadMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
 
@@ -37,6 +50,7 @@ export function ChatRuntimeProvider({
       console.log("Starting new chat, clearing messages");
       setMessages([]);
       setLoadedSessionId(null);
+      clearSourcesCache();
       return;
     }
 
@@ -54,11 +68,19 @@ export function ChatRuntimeProvider({
         const response = await fetch(`/api/chat/messages?sessionId=${sessionId}`);
         if (response.ok) {
           const data = await response.json();
-          const loadedMessages: ThreadMessageLike[] = data.messages.map(
-            (msg: ChatMessage) => ({
-              role: msg.role,
-              content: [{ type: "text" as const, text: msg.content }],
-            })
+          const loadedMessages: ExtendedThreadMessage[] = data.messages.map(
+            (msg: ChatMessage) => {
+              // Cache sources for this message if available
+              if (msg.sources && msg.sources.length > 0) {
+                cacheMessageSources(msg.id, msg.sources);
+              }
+
+              return {
+                role: msg.role,
+                content: [{ type: "text" as const, text: msg.content }],
+                messageId: msg.id,
+              };
+            }
           );
           setMessages(loadedMessages);
           setLoadedSessionId(sessionId);

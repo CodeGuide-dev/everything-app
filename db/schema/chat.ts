@@ -43,3 +43,19 @@ export const chatMessages = pgTable("chat_messages", {
     createdAtIdx: index("chat_messages_created_at_idx").on(table.createdAt),
     roleIdx: index("chat_messages_role_idx").on(table.role),
 }));
+
+export const searchSources = pgTable("search_sources", {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    messageId: text("message_id")
+        .notNull()
+        .references(() => chatMessages.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    faviconUrl: text("favicon_url"),
+    snippet: text("snippet"), // Optional snippet/description from search result
+    createdAt: timestamp("created_at")
+        .$defaultFn(() => new Date())
+        .notNull(),
+}, (table) => ({
+    messageIdIdx: index("search_sources_message_id_idx").on(table.messageId),
+}));

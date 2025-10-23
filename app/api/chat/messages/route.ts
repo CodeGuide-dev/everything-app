@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, chatMessages, chatSessions } from "@/db";
-import { eq, and } from "drizzle-orm";
+import { db, chatMessages, chatSessions, searchSources } from "@/db";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 const createMessageSchema = z.object({
@@ -99,7 +99,32 @@ export async function GET(request: NextRequest) {
       .limit(Math.min(limit, 100))
       .offset(Math.max(offset, 0));
 
-    return NextResponse.json({ messages });
+    // Get sources for all messages in this session
+    const messageIds = messages.map(m => m.id);
+    let sourcesMap: Record<string, any[]> = {};
+
+    if (messageIds.length > 0) {
+      const allSources = await db
+        .select()
+        .from(searchSources)
+        .where(inArray(searchSources.messageId, messageIds));
+
+      // Group sources by messageId
+      allSources.forEach(source => {
+        if (!sourcesMap[source.messageId]) {
+          sourcesMap[source.messageId] = [];
+        }
+        sourcesMap[source.messageId].push(source);
+      });
+    }
+
+    // Add sources to each message
+    const messagesWithSources = messages.map(msg => ({
+      ...msg,
+      sources: sourcesMap[msg.id] || [],
+    }));
+
+    return NextResponse.json({ messages: messagesWithSources });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -32,6 +32,8 @@ import { Button } from "@/components/ui/button";
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { SourceCardsGrid } from "@/components/assistant-ui/source-card";
+import { useMessageSources } from "@/app/chat/use-message-sources";
 import {
   ComposerAddAttachment,
   ComposerAttachments,
@@ -296,26 +298,42 @@ const MessageError: FC = () => {
 const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root asChild>
-      <div
-        className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
-        data-role="assistant"
-      >
-        <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
-          <MessagePrimitive.Parts
-            components={{
-              Text: MarkdownText,
-              tools: { Fallback: ToolFallback },
-            }}
-          />
-          <MessageError />
-        </div>
-
-        <div className="aui-assistant-message-footer mt-2 ml-2 flex">
-          <BranchPicker />
-          <AssistantActionBar />
-        </div>
-      </div>
+      <AssistantMessageContent />
     </MessagePrimitive.Root>
+  );
+};
+
+const AssistantMessageContent: FC = () => {
+  // Access message data through the primitive
+  const message = MessagePrimitive.useMessage();
+  const messageId = (message.message as any).messageId;
+  const { sources } = useMessageSources(messageId);
+
+  return (
+    <div
+      className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
+      data-role="assistant"
+    >
+      <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
+        <MessagePrimitive.Parts
+          components={{
+            Text: MarkdownText,
+            tools: { Fallback: ToolFallback },
+          }}
+        />
+        <MessageError />
+
+        {/* Display source cards if available */}
+        {sources.length > 0 && (
+          <SourceCardsGrid sources={sources} className="mt-4" />
+        )}
+      </div>
+
+      <div className="aui-assistant-message-footer mt-2 ml-2 flex">
+        <BranchPicker />
+        <AssistantActionBar />
+      </div>
+    </div>
   );
 };
 

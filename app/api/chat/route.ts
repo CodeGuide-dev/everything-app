@@ -1,10 +1,10 @@
 import { auth } from "@/lib/auth";
 import { openai, createOpenAI } from "@ai-sdk/openai";
 import { streamText, generateObject } from "ai";
-import { db, chatMessages, chatSessions } from "@/db";
+import { db, chatMessages, chatSessions, searchSources } from "@/db";
 import { getUserApiKey } from "@/lib/api-keys";
 import { eq } from "drizzle-orm";
-import { searxngService } from "@/lib/services/searxng";
+import { searxngService, type SearchResult } from "@/lib/services/searxng";
 import { z } from "zod";
 
 // Allow streaming responses up to 30 seconds
@@ -15,6 +15,18 @@ const searchQuerySchema = z.object({
   queries: z.array(z.string()).max(3).describe("Generate 1-3 search queries to find relevant information"),
   reasoning: z.string().describe("Brief explanation of why these queries are relevant"),
 });
+
+// Helper function to get favicon URL from a website URL
+function getFaviconUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    // Use Google's favicon service as a reliable fallback
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+  } catch (error) {
+    console.error('Failed to parse URL for favicon:', url, error);
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -171,6 +183,8 @@ export async function POST(request: Request) {
 
     // Handle search-augmented response if enabled
     let searchContext = "";
+    let collectedSearchSources: Array<{ url: string; title: string; snippet?: string }> = [];
+
     if (useSearch) {
       try {
         console.log('Search enabled, generating search queries...');
@@ -189,9 +203,25 @@ export async function POST(request: Request) {
         if (queryGeneration.object.queries.length > 0) {
           const searchResults = await searxngService.searchMultiple(queryGeneration.object.queries);
 
-          // Step 3: Format search results as context
+          // Step 3: Collect unique search sources from all results
+          const seenUrls = new Set<string>();
+          searchResults.forEach((response) => {
+            response.results.slice(0, 5).forEach((result: SearchResult) => {
+              if (!seenUrls.has(result.url)) {
+                seenUrls.add(result.url);
+                collectedSearchSources.push({
+                  url: result.url,
+                  title: result.title,
+                  snippet: result.content,
+                });
+              }
+            });
+          });
+
+          // Step 4: Format search results as context
           searchContext = searxngService.formatSearchContext(searchResults);
           console.log('Search context generated, length:', searchContext.length);
+          console.log('Collected search sources:', collectedSearchSources.length);
 
           // Add search context to the messages
           formattedMessages.push({
@@ -233,6 +263,25 @@ export async function POST(request: Request) {
           }).returning({ id: chatMessages.id });
 
           console.log('Saved assistant message:', { messageId: savedMessage.id, sessionId: currentSessionId, textLength: result.text.length });
+
+          // Save search sources if any were collected
+          if (collectedSearchSources.length > 0) {
+            try {
+              const sourcesToInsert = collectedSearchSources.map(source => ({
+                messageId: savedMessage.id,
+                url: source.url,
+                title: source.title,
+                snippet: source.snippet,
+                faviconUrl: getFaviconUrl(source.url),
+              }));
+
+              await db.insert(searchSources).values(sourcesToInsert);
+              console.log('Saved search sources:', sourcesToInsert.length);
+            } catch (error) {
+              console.error('Failed to save search sources:', error);
+              // Don't fail the entire request if sources can't be saved
+            }
+          }
 
           // Update session timestamp
           await db
