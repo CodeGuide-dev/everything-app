@@ -14,6 +14,8 @@ export const user = pgTable("user", {
     updatedAt: timestamp("updated_at")
         .$defaultFn(() => /* @__PURE__ */ new Date())
         .notNull(),
+    chatModel: text("chat_model").$defaultFn(() => "gpt-4o"),
+    summarizationModel: text("summarization_model").$defaultFn(() => "gpt-4o-mini"),
 });
 
 export const session = pgTable("session", {

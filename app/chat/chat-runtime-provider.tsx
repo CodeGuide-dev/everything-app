@@ -7,6 +7,7 @@ import {
 } from "@assistant-ui/react";
 import { useState, useEffect, useCallback } from "react";
 import { useChatModel } from "./chat-model-context";
+import { useChatSearch } from "./chat-search-context";
 
 const convertMessage = (message: ThreadMessageLike) => {
   return message;
@@ -25,6 +26,7 @@ export function ChatRuntimeProvider({
   children: React.ReactNode;
 }>) {
   const { selectedModel, sessionId, setSessionId } = useChatModel();
+  const { useSearch } = useChatSearch();
   const [messages, setMessages] = useState<readonly ThreadMessageLike[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
@@ -95,7 +97,7 @@ export function ChatRuntimeProvider({
 
       try {
         // Send message to API using the updated messages
-        console.log("Sending to API with", updatedMessages.length, "messages");
+        console.log("Sending to API with", updatedMessages.length, "messages", useSearch ? "(with search)" : "");
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -105,6 +107,7 @@ export function ChatRuntimeProvider({
             messages: updatedMessages,
             sessionId: sessionId,
             aiModel: selectedModel,
+            useSearch: useSearch,
           }),
         });
 
@@ -204,7 +207,7 @@ export function ChatRuntimeProvider({
         setMessages((currentMessages) => [...currentMessages, errorMessage]);
       }
     },
-    [sessionId, selectedModel, setSessionId]
+    [sessionId, selectedModel, setSessionId, useSearch]
   );
 
   const runtime = useExternalStoreRuntime<ThreadMessageLike>({

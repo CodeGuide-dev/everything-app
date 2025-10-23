@@ -55,6 +55,22 @@ services:
     profiles:
       - dev
 
+  # SearXNG Search Engine
+  searxng:
+    image: searxng/searxng:latest
+    container_name: codeguide-starter-fullstack-searxng
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/searxng:/etc/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8080/
+    networks:
+      - codeguide-starter-fullstack-network
+    profiles:
+      - dev
+
 volumes:
   postgres_data:
     driver: local

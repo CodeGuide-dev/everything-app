@@ -1,12 +1,20 @@
 import { auth } from "@/lib/auth";
 import { openai, createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { streamText, generateObject } from "ai";
 import { db, chatMessages, chatSessions } from "@/db";
 import { getUserApiKey } from "@/lib/api-keys";
 import { eq } from "drizzle-orm";
+import { searxngService } from "@/lib/services/searxng";
+import { z } from "zod";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
+
+// Schema for search query generation
+const searchQuerySchema = z.object({
+  queries: z.array(z.string()).max(3).describe("Generate 1-3 search queries to find relevant information"),
+  reasoning: z.string().describe("Brief explanation of why these queries are relevant"),
+});
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +31,12 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { messages, sessionId, apiKeyId, aiModel } = body;
+    const { messages, sessionId, apiKeyId, aiModel, useSearch } = body;
     console.log('Received request body:', {
       messagesLength: messages?.length,
       sessionId,
       aiModel,
+      useSearch,
       firstMessage: messages?.[0]
     });
     const modelId = aiModel
@@ -159,6 +168,42 @@ export async function POST(request: Request) {
     });
 
     console.log('Formatted messages:', formattedMessages);
+
+    // Handle search-augmented response if enabled
+    let searchContext = "";
+    if (useSearch) {
+      try {
+        console.log('Search enabled, generating search queries...');
+
+        // Step 1: Use generateObject to create search queries from user message
+        const lastUserMessage = formattedMessages[formattedMessages.length - 1];
+        const queryGeneration = await generateObject({
+          model: openaiProvider("gpt-4o-mini"),
+          schema: searchQuerySchema,
+          prompt: `Generate relevant search queries to answer this question: "${lastUserMessage.content}"`,
+        });
+
+        console.log('Generated search queries:', queryGeneration.object);
+
+        // Step 2: Execute searches using SearXNG
+        if (queryGeneration.object.queries.length > 0) {
+          const searchResults = await searxngService.searchMultiple(queryGeneration.object.queries);
+
+          // Step 3: Format search results as context
+          searchContext = searxngService.formatSearchContext(searchResults);
+          console.log('Search context generated, length:', searchContext.length);
+
+          // Add search context to the messages
+          formattedMessages.push({
+            role: "system",
+            content: `Here is relevant information from web searches:\n\n${searchContext}\n\nUse this information to provide an accurate and helpful response. Cite sources when possible.`,
+          });
+        }
+      } catch (error) {
+        console.error('Search error, falling back to direct chat:', error);
+        // Continue with regular chat if search fails
+      }
+    }
 
     const result = streamText({
       model: openaiProvider(modelId),
