@@ -178,7 +178,7 @@ export async function POST(request: Request) {
         // Step 1: Use generateObject to create search queries from user message
         const lastUserMessage = formattedMessages[formattedMessages.length - 1];
         const queryGeneration = await generateObject({
-          model: openaiProvider("gpt-4o-mini"),
+          model: openaiProvider("gpt-4.1"),
           schema: searchQuerySchema,
           prompt: `Generate relevant search queries to answer this question: "${lastUserMessage.content}"`,
         });

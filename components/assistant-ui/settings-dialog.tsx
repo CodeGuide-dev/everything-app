@@ -21,6 +21,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AI_MODELS = [
+  { value: "gpt-5", label: "GPT 5"},
+  { value: "o4-mini", label: "o4 Mini"},
   { value: "gpt-4o", label: "GPT-4o (Recommended)" },
   { value: "gpt-4o-mini", label: "GPT-4o Mini (Faster)" },
   { value: "gpt-4-turbo", label: "GPT-4 Turbo" },

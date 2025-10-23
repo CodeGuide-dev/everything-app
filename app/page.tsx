@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-import { HeroSection, FeaturesSection, PricingSection } from "@/components/landing";
+import { HeroSection, FeaturesSection, PricingSection, Navbar, Footer } from "@/components/landing";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-static";
@@ -9,6 +9,7 @@ export const dynamic = "force-static";
 export default function Home() {
   return (
     <>
+      <Navbar />
       <HeroSection />
       <FeaturesSection />
       <PricingSection />
@@ -33,6 +34,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <Footer />
     </>
   );
 }
