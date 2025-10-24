@@ -13,7 +13,7 @@ export interface SourceCardProps {
   className?: string;
 }
 
-export function SourceCard({ url, title, faviconUrl, snippet, className }: SourceCardProps) {
+export function SourceCard({ url, title, faviconUrl, className }: SourceCardProps) {
   const [faviconError, setFaviconError] = useState(false);
 
   // Extract domain from URL for display
@@ -32,46 +32,39 @@ export function SourceCard({ url, title, faviconUrl, snippet, className }: Sourc
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "group block transition-all hover:scale-[1.02]",
+        "group block flex-shrink-0",
         className
       )}
       aria-label={`Source: ${title}`}
     >
-      <Card className="h-full p-3 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
-        <div className="flex items-start gap-3">
+      <Card className="h-full px-3 py-2 hover:shadow-md hover:border-primary/50 transition-all cursor-pointer">
+        <div className="flex items-center gap-2">
           {/* Favicon */}
-          <div className="flex-shrink-0 mt-1">
+          <div className="flex-shrink-0">
             {faviconUrl && !faviconError ? (
               <img
                 src={faviconUrl}
                 alt=""
-                className="size-5 rounded-sm"
+                className="size-4 rounded-sm"
                 onError={() => setFaviconError(true)}
               />
             ) : (
-              <GlobeIcon className="size-5 text-muted-foreground" />
+              <GlobeIcon className="size-4 text-muted-foreground" />
             )}
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-medium text-sm line-clamp-2 group-hover:text-primary transition-colors">
-                {title}
-              </h3>
-              <ExternalLinkIcon className="size-3 text-muted-foreground flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-
-            <p className="text-xs text-muted-foreground mt-1">
+            <h3 className="font-medium text-xs line-clamp-1 group-hover:text-primary transition-colors">
+              {title}
+            </h3>
+            <p className="text-[10px] text-muted-foreground">
               {getDomain(url)}
             </p>
-
-            {snippet && (
-              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                {snippet}
-              </p>
-            )}
           </div>
+
+          {/* External link icon */}
+          <ExternalLinkIcon className="size-3 text-muted-foreground flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </Card>
     </a>
@@ -97,11 +90,15 @@ export function SourceCardsGrid({ sources, className }: SourceCardsGridProps) {
   return (
     <div
       className={cn(
-        "grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3",
+        "flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/30",
         className
       )}
       role="list"
       aria-label="Search sources"
+      style={{
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) transparent'
+      }}
     >
       {sources.map((source) => (
         <SourceCard
@@ -109,7 +106,7 @@ export function SourceCardsGrid({ sources, className }: SourceCardsGridProps) {
           url={source.url}
           title={source.title}
           faviconUrl={source.faviconUrl}
-          snippet={source.snippet}
+          className="w-[280px]"
         />
       ))}
     </div>

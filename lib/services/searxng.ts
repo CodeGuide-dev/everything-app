@@ -148,7 +148,7 @@ export class SearXNGService {
         queries.forEach((response, query) => {
             context += `## Query: "${query}"\n`;
             context += `Found ${response.number_of_results} results\n\n`;
-            context += this.extractSnippets(response, 3);
+            context += this.extractSnippets(response, 5);
             context += "\n---\n\n";
         });
 

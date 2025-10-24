@@ -21,6 +21,7 @@ import {
   ErrorPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useMessage,
 } from "@assistant-ui/react";
 
 import type { FC } from "react";
@@ -304,10 +305,18 @@ const AssistantMessage: FC = () => {
 };
 
 const AssistantMessageContent: FC = () => {
-  // Access message data through the primitive
-  const message = MessagePrimitive.useMessage();
-  const messageId = (message.message as any).messageId;
-  const { sources } = useMessageSources(messageId);
+  // Access message data through the hook
+  const message = useMessage();
+
+  // Extract messageId from the Symbol(innerMessage) property
+  const innerMessageSymbol = Object.getOwnPropertySymbols(message).find(
+    (sym) => sym.toString() === "Symbol(innerMessage)"
+  );
+  const messageId = innerMessageSymbol
+    ? (message as any)[innerMessageSymbol]?.messageId
+    : undefined;
+
+  const { sources, isLoading } = useMessageSources(messageId);
 
   return (
     <div
@@ -326,6 +335,13 @@ const AssistantMessageContent: FC = () => {
         {/* Display source cards if available */}
         {sources.length > 0 && (
           <SourceCardsGrid sources={sources} className="mt-4" />
+        )}
+
+        {/* Show loading placeholder when fetching sources */}
+        {isLoading && sources.length === 0 && (
+          <div className="mt-4 text-sm text-muted-foreground animate-pulse">
+            Loading sources...
+          </div>
         )}
       </div>
 

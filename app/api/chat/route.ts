@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth";
-import { openai, createOpenAI } from "@ai-sdk/openai";
+import { createOpenAI } from "@ai-sdk/openai";
 import { streamText, generateObject } from "ai";
 import { db, chatMessages, chatSessions, searchSources } from "@/db";
 import { getUserApiKey } from "@/lib/api-keys";
@@ -12,8 +12,8 @@ export const maxDuration = 30;
 
 // Schema for search query generation
 const searchQuerySchema = z.object({
-  queries: z.array(z.string()).max(3).describe("Generate 1-3 search queries to find relevant information"),
-  reasoning: z.string().describe("Brief explanation of why these queries are relevant"),
+  query: z.string().describe("Generate a single optimized search query to find relevant information"),
+  reasoning: z.string().describe("Brief explanation of why this query is relevant"),
 });
 
 // Helper function to get favicon URL from a website URL
@@ -183,39 +183,43 @@ export async function POST(request: Request) {
 
     // Handle search-augmented response if enabled
     let searchContext = "";
-    let collectedSearchSources: Array<{ url: string; title: string; snippet?: string }> = [];
+    const collectedSearchSources: Array<{ url: string; title: string; snippet?: string }> = [];
 
     if (useSearch) {
       try {
         console.log('Search enabled, generating search queries...');
 
-        // Step 1: Use generateObject to create search queries from user message
+        // Step 1: Use generateObject to create a search query from user message
         const lastUserMessage = formattedMessages[formattedMessages.length - 1];
         const queryGeneration = await generateObject({
           model: openaiProvider("gpt-4.1"),
           schema: searchQuerySchema,
-          prompt: `Generate relevant search queries to answer this question: "${lastUserMessage.content}"`,
+          prompt: `Generate a relevant search query to answer this question: "${lastUserMessage.content}"`,
         });
 
-        console.log('Generated search queries:', queryGeneration.object);
+        console.log('Generated search query:', queryGeneration.object);
 
-        // Step 2: Execute searches using SearXNG
-        if (queryGeneration.object.queries.length > 0) {
-          const searchResults = await searxngService.searchMultiple(queryGeneration.object.queries);
+        // Step 2: Execute single search using SearXNG
+        if (queryGeneration.object.query) {
+          const searchResponse = await searxngService.search(queryGeneration.object.query);
 
-          // Step 3: Collect unique search sources from all results
+          // Create a Map for compatibility with formatSearchContext
+          const searchResults = new Map<string, typeof searchResponse>();
+          searchResults.set(queryGeneration.object.query, searchResponse);
+
+          console.log("search results", searchResponse)
+
+          // Step 3: Collect unique search sources from results
           const seenUrls = new Set<string>();
-          searchResults.forEach((response) => {
-            response.results.slice(0, 5).forEach((result: SearchResult) => {
-              if (!seenUrls.has(result.url)) {
-                seenUrls.add(result.url);
-                collectedSearchSources.push({
-                  url: result.url,
-                  title: result.title,
-                  snippet: result.content,
-                });
-              }
-            });
+          searchResponse.results.slice(0, 5).forEach((result: SearchResult) => {
+            if (!seenUrls.has(result.url)) {
+              seenUrls.add(result.url);
+              collectedSearchSources.push({
+                url: result.url,
+                title: result.title,
+                snippet: result.content,
+              });
+            }
           });
 
           // Step 4: Format search results as context
@@ -234,6 +238,8 @@ export async function POST(request: Request) {
         // Continue with regular chat if search fails
       }
     }
+
+    console.log("formattedMessages",formattedMessages)
 
     const result = streamText({
       model: openaiProvider(modelId),
