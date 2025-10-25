@@ -135,6 +135,18 @@ export async function GET(request: Request) {
       return sum + tokensUsed;
     }, 0);
     const avgTokens = totalUsage > 0 ? Math.round(totalTokens / totalUsage) : 0;
+    
+    // Calculate average input/output tokens
+    const totalInputTokens = recentUsage.reduce((sum, usage) => {
+      const inputTokens = (usage.metadata as any)?.inputTokens || 0;
+      return sum + inputTokens;
+    }, 0);
+    const totalOutputTokens = recentUsage.reduce((sum, usage) => {
+      const outputTokens = (usage.metadata as any)?.outputTokens || 0;
+      return sum + outputTokens;
+    }, 0);
+    const avgInputTokens = totalUsage > 0 ? Math.round(totalInputTokens / totalUsage) : 0;
+    const avgOutputTokens = totalUsage > 0 ? Math.round(totalOutputTokens / totalUsage) : 0;
 
     // Format response
     return NextResponse.json({
@@ -143,6 +155,8 @@ export async function GET(request: Request) {
         chatCount,
         searchCount,
         avgTokens,
+        avgInputTokens,
+        avgOutputTokens,
         last30DaysCount,
         trendPercentage: Math.round(trendPercentage * 10) / 10, // Round to 1 decimal
       },
@@ -152,6 +166,8 @@ export async function GET(request: Request) {
         type: usage.featureType,
         model: (usage.metadata as any)?.model || 'N/A',
         tokens: (usage.metadata as any)?.tokensUsed || 0,
+        inputTokens: (usage.metadata as any)?.inputTokens || 0,
+        outputTokens: (usage.metadata as any)?.outputTokens || 0,
         timestamp: usage.createdAt,
       })),
     });

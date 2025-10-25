@@ -3,6 +3,8 @@ export interface AnalyticsSummary {
   chatCount: number;
   searchCount: number;
   avgTokens: number;
+  avgInputTokens: number;
+  avgOutputTokens: number;
   last30DaysCount: number;
   trendPercentage: number;
 }
@@ -18,6 +20,8 @@ export interface RecentUsage {
   type: 'chat' | 'web_search';
   model: string;
   tokens: number;
+  inputTokens: number;
+  outputTokens: number;
   timestamp: Date | string;
 }
 

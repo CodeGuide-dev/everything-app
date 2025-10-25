@@ -15,6 +15,8 @@ export const aiUsage = pgTable("ai_usage", {
     metadata: json("metadata").$type<{
         messageCount?: number;
         tokensUsed?: number;
+        inputTokens?: number;
+        outputTokens?: number;
         model?: string;
         provider?: string;
         sessionId?: string;

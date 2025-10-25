@@ -8,6 +8,8 @@ type AIFeatureType = typeof aiFeatureTypeEnum.enumValues[number];
 export type UsageMetadata = {
   messageCount?: number;
   tokensUsed?: number;
+  inputTokens?: number;
+  outputTokens?: number;
   model?: string;
   provider?: string;
   sessionId?: string;

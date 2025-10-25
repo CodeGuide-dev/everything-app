@@ -277,6 +277,8 @@ export async function POST(request: Request) {
             model: modelId,
             provider: 'openai',
             tokensUsed: result.usage?.totalTokens || 0,
+            inputTokens: result.usage?.promptTokens || 0,
+            outputTokens: result.usage?.completionTokens || 0,
             messageCount: messages.length,
             searchQuery: useSearch && collectedSearchSources.length > 0 ? formattedMessages.find(m => m.role === 'system')?.content?.substring(0, 100) : undefined,
             resultCount: collectedSearchSources.length,

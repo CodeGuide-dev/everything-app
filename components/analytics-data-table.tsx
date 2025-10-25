@@ -48,7 +48,9 @@ export function AnalyticsDataTable({ data }: AnalyticsDataTableProps) {
                 <TableRow>
                   <TableHead>Type</TableHead>
                   <TableHead>Model</TableHead>
-                  <TableHead className="text-right">Tokens</TableHead>
+                  <TableHead className="text-right">Total Tokens</TableHead>
+                  <TableHead className="text-right">Input Tokens</TableHead>
+                  <TableHead className="text-right">Output Tokens</TableHead>
                   <TableHead>Time</TableHead>
                 </TableRow>
               </TableHeader>
@@ -70,6 +72,12 @@ export function AnalyticsDataTable({ data }: AnalyticsDataTableProps) {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {usage.tokens.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {usage.inputTokens.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {usage.outputTokens.toLocaleString()}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {format(new Date(usage.timestamp), 'MMM d, yyyy h:mm a')}
