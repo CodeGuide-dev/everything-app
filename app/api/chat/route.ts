@@ -6,6 +6,7 @@ import { getUserApiKey } from "@/lib/api-keys";
 import { eq } from "drizzle-orm";
 import { searxngService, type SearchResult } from "@/lib/services/searxng";
 import { z } from "zod";
+import { logAIUsage } from "@/lib/analytics/usage-logger";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
@@ -269,6 +270,17 @@ export async function POST(request: Request) {
           }).returning({ id: chatMessages.id });
 
           console.log('Saved assistant message:', { messageId: savedMessage.id, sessionId: currentSessionId, textLength: result.text.length });
+
+          // Log AI usage for analytics
+          await logAIUsage(session.user.id, useSearch ? "web_search" : "chat", {
+            sessionId: currentSessionId,
+            model: modelId,
+            provider: 'openai',
+            tokensUsed: result.usage?.totalTokens || 0,
+            messageCount: messages.length,
+            searchQuery: useSearch && collectedSearchSources.length > 0 ? formattedMessages.find(m => m.role === 'system')?.content?.substring(0, 100) : undefined,
+            resultCount: collectedSearchSources.length,
+          });
 
           // Save search sources if any were collected
           if (collectedSearchSources.length > 0) {
