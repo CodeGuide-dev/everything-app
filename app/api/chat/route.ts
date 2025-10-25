@@ -1,12 +1,32 @@
 import { auth } from "@/lib/auth";
-import { openai, createOpenAI } from "@ai-sdk/openai";
-import { streamText } from "ai";
-import { db, chatMessages, chatSessions } from "@/db";
+import { createOpenAI } from "@ai-sdk/openai";
+import { streamText, generateObject } from "ai";
+import { db, chatMessages, chatSessions, searchSources } from "@/db";
 import { getUserApiKey } from "@/lib/api-keys";
 import { eq } from "drizzle-orm";
+import { searxngService, type SearchResult } from "@/lib/services/searxng";
+import { z } from "zod";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
+
+// Schema for search query generation
+const searchQuerySchema = z.object({
+  query: z.string().describe("Generate a single optimized search query to find relevant information"),
+  reasoning: z.string().describe("Brief explanation of why this query is relevant"),
+});
+
+// Helper function to get favicon URL from a website URL
+function getFaviconUrl(url: string): string | null {
+  try {
+    const urlObj = new URL(url);
+    // Use Google's favicon service as a reliable fallback
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=64`;
+  } catch (error) {
+    console.error('Failed to parse URL for favicon:', url, error);
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +43,12 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { messages, sessionId, apiKeyId, aiModel } = body;
+    const { messages, sessionId, apiKeyId, aiModel, useSearch } = body;
     console.log('Received request body:', {
       messagesLength: messages?.length,
       sessionId,
       aiModel,
+      useSearch,
       firstMessage: messages?.[0]
     });
     const modelId = aiModel
@@ -160,6 +181,66 @@ export async function POST(request: Request) {
 
     console.log('Formatted messages:', formattedMessages);
 
+    // Handle search-augmented response if enabled
+    let searchContext = "";
+    const collectedSearchSources: Array<{ url: string; title: string; snippet?: string }> = [];
+
+    if (useSearch) {
+      try {
+        console.log('Search enabled, generating search queries...');
+
+        // Step 1: Use generateObject to create a search query from user message
+        const lastUserMessage = formattedMessages[formattedMessages.length - 1];
+        const queryGeneration = await generateObject({
+          model: openaiProvider("gpt-4.1"),
+          schema: searchQuerySchema,
+          prompt: `Generate a relevant search query to answer this question: "${lastUserMessage.content}"`,
+        });
+
+        console.log('Generated search query:', queryGeneration.object);
+
+        // Step 2: Execute single search using SearXNG
+        if (queryGeneration.object.query) {
+          const searchResponse = await searxngService.search(queryGeneration.object.query);
+
+          // Create a Map for compatibility with formatSearchContext
+          const searchResults = new Map<string, typeof searchResponse>();
+          searchResults.set(queryGeneration.object.query, searchResponse);
+
+          console.log("search results", searchResponse)
+
+          // Step 3: Collect unique search sources from results
+          const seenUrls = new Set<string>();
+          searchResponse.results.slice(0, 5).forEach((result: SearchResult) => {
+            if (!seenUrls.has(result.url)) {
+              seenUrls.add(result.url);
+              collectedSearchSources.push({
+                url: result.url,
+                title: result.title,
+                snippet: result.content,
+              });
+            }
+          });
+
+          // Step 4: Format search results as context
+          searchContext = searxngService.formatSearchContext(searchResults);
+          console.log('Search context generated, length:', searchContext.length);
+          console.log('Collected search sources:', collectedSearchSources.length);
+
+          // Add search context to the messages
+          formattedMessages.push({
+            role: "system",
+            content: `Here is relevant information from web searches:\n\n${searchContext}\n\nUse this information to provide an accurate and helpful response. Cite sources when possible.`,
+          });
+        }
+      } catch (error) {
+        console.error('Search error, falling back to direct chat:', error);
+        // Continue with regular chat if search fails
+      }
+    }
+
+    console.log("formattedMessages",formattedMessages)
+
     const result = streamText({
       model: openaiProvider(modelId),
       messages: formattedMessages,
@@ -188,6 +269,25 @@ export async function POST(request: Request) {
           }).returning({ id: chatMessages.id });
 
           console.log('Saved assistant message:', { messageId: savedMessage.id, sessionId: currentSessionId, textLength: result.text.length });
+
+          // Save search sources if any were collected
+          if (collectedSearchSources.length > 0) {
+            try {
+              const sourcesToInsert = collectedSearchSources.map(source => ({
+                messageId: savedMessage.id,
+                url: source.url,
+                title: source.title,
+                snippet: source.snippet,
+                faviconUrl: getFaviconUrl(source.url),
+              }));
+
+              await db.insert(searchSources).values(sourcesToInsert);
+              console.log('Saved search sources:', sourcesToInsert.length);
+            } catch (error) {
+              console.error('Failed to save search sources:', error);
+              // Don't fail the entire request if sources can't be saved
+            }
+          }
 
           // Update session timestamp
           await db

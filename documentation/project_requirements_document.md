@@ -1,127 +1,113 @@
-# Project Requirements Document
-
 # Project Requirements Document (PRD)
 
 ## 1. Project Overview
 
-**Paragraph 1:**
-Everything-app is envisioned as a “super app” that brings multiple AI-driven services—starting with a conversational AI chat—under one roof. Built on top of a Next.js full-stack starter template, it provides secure user authentication, a centralized dashboard, and a highly customizable UI. The initial focus is on delivering a real-time, streaming AI chat interface using Vercel’s `@ai-sdk` and the `assistant-ui` component library, backed by a PostgreSQL database via Drizzle ORM.
+**Everything-App** is a starter platform built on Next.js that gives developers a ready-to-use foundation for AI-driven web applications. At its core, it provides real-time AI chat functionality, secure user authentication, a centralized dashboard, and in-app API key management. Instead of wiring up every piece from scratch, teams can clone this repo, configure environment variables, and jump straight into customizing AI workflows or extending the UI with new tools like search or image generation.
 
-**Paragraph 2:**
-The core problem Everything-app solves is fragmentation: users today must jump between different platforms for AI chat, AI search, and AI image generation. By unifying these tools into a single, cohesive experience, Everything-app aims to increase productivity and user engagement. Success for version 1 is measured by stable user authentication, reliable chat streaming, and accurate storage of conversation history—all delivered with a modern, accessible UI and sub-second response times for small prompts.
-
----
+We’re building Everything-App to solve the common pain point of integrating multiple moving parts—front end, back end, database, AI SDKs, and UI components—into a single, maintainable codebase. Our success criteria are simple: developers should be able to sign up, chat with an AI model, store and retrieve messages, and manage API keys out of the box. Performance, type safety, and developer ergonomics guide every decision so that adding new AI modules in later phases is straightforward.
 
 ## 2. In-Scope vs. Out-of-Scope
 
-**In-Scope (Version 1):**
-- User sign-up, sign-in, and session management via the `better-auth` library.
-- Protected dashboard with sidebar and header navigation.
-- AI Chat interface under `/chat` route:
-  - Real-time, streaming conversations via `@ai-sdk`.
-  - UI components from `assistant-ui` integrated with `shadcn/ui` & Tailwind CSS.
-  - Persistent chat history stored in PostgreSQL using Drizzle ORM schemas (`threads`, `messages`).
-- Environment variable management and validation using `zod`.
-- Deployment setup for Vercel and Docker (standalone output).
-- Code quality tooling: ESLint, Prettier, TypeScript.
+### In-Scope (Version 1.0)
+- User sign-up, sign-in, sign-out via **better-auth**.  
+- Real-time, streaming **AI chat** interface using Vercel’s `@ai-sdk` + `assistant-ui`.  
+- Dashboard page listing available AI tools (initially just Chat).  
+- **API Key Manager**: create, view, revoke service keys.  
+- Persistent storage of users, chat sessions, messages, and keys via **Drizzle ORM** + **PostgreSQL**.  
+- Responsive, theme-toggle UI built with **React**, **TypeScript**, **Tailwind CSS**, and **shadcn/ui**.  
+- Deployment configuration for **Vercel** and standalone **Docker** builds.
 
-**Out-of-Scope (Later Phases):**
-- AI Search feature under `/search` with summary generation.
-- AI Image Generation under `/image` (e.g., Google Nano Banana).
-- Background job processing (e.g., Inngest) for long-running tasks.
-- Multi-provider AI abstraction layer (beyond initial `@ai-sdk`).
-- Advanced user profiles or team collaboration features.
-
----
+### Out-of-Scope (Planned for Later Phases)
+- AI search functionality (vector store, embeddings).  
+- AI image generation workflows.  
+- Background job queue for long-running tasks (e.g., BullMQ, Inngest).  
+- User preferences beyond theme (advanced notifications, model defaults).  
+- Automated testing (unit, integration, E2E).  
+- Multi-tenant or enterprise-grade features (role-based access, usage quotas).
 
 ## 3. User Flow
 
-**Paragraph 1:**
-A new user lands on the home page and clicks “Sign Up.” They provide an email and password (or use a social login, if enabled), then verify their account. Upon successful sign-up, they are redirected to the dashboard at `/dashboard`. An existing user can sign in directly from the home page. Once authenticated, the user sees a sidebar on the left with links to “Chat,” and a main content area on the right showing the welcome message or recent chat threads.
+A new visitor lands on the public site and clicks **Sign Up**. They fill in their email and password, submit, and receive an authenticated session. Upon successful sign-in, they’re redirected to the **Dashboard**. The dashboard shows a sidebar (Chat, Keys, Settings) and a main content area set to the classic AI chat interface by default. The user types a prompt, hits send, and sees the AI’s streaming response in real time.
 
-**Paragraph 2:**
-To start a new chat, the user clicks “Chat” in the sidebar. They land on `/chat` and see an input box at the bottom. As they type and hit “Send,” the UI shows a typing indicator while the `assistant-ui` component streams responses from the AI model. Each message—both user and AI—is appended to the conversation view in real time. The user can scroll through past messages; all chat data is saved automatically. If any error occurs (e.g., rate limit exceeded), a friendly alert appears with guidance.
-
----
+From the dashboard, the user can switch to **API Keys** to generate or revoke keys for external AI services. They can toggle between light/dark mode at any time. When they’re done, they click **Log Out**, which clears their session and brings them back to the public landing page.
 
 ## 4. Core Features
-
-- **Authentication Module**: Sign-up, sign-in, session tokens, route protection (better-auth).
-- **Dashboard Layout**: Responsive sidebar, header, theming (dark/light), navigation placeholders.
-- **AI Chat Interface**:
-  - Real-time streaming using Vercel `@ai-sdk`.
-  - UI built with `assistant-ui` + `shadcn/ui` + Tailwind CSS.
-  - Input validation, file/attachment support.
-- **Data Persistence**:
-  - Drizzle ORM schemas for `users`, `threads`, `messages`.
-  - Type-safe queries and migrations.
-- **API Endpoints**:
-  - `/api/chat` POST route for streaming and saving messages.
-  - Environment validation middleware (Zod).
-- **Theming & Accessibility**:
-  - Dark/light mode toggle.
-  - WCAG-compliant UI components.
-- **DevOps & Tooling**:
-  - Dockerfile (`standalone`), Vercel deployment.
-  - ESLint, Prettier, TypeScript.
-
----
+- **Authentication**: Secure sign-up/sign-in/out flows with session cookies and password hashing.  
+- **AI Chat Module**:  
+  • Real-time streaming chat using `@ai-sdk`.  
+  • Chat session management, message history, and role labels.  
+- **Dashboard Hub**:  
+  • Sidebar navigation for Chat & API Keys.  
+  • Main area for dynamic tool rendering.  
+- **API Key Management**:  
+  • CRUD interface for service keys.  
+  • Key permissions and expiration metadata.  
+- **Database Layer**:  
+  • PostgreSQL schemas via Drizzle ORM (users, sessions, messages, keys).  
+  • Type-safe queries and migrations.  
+- **UI Components**:  
+  • Reusable buttons, inputs, modals from `shadcn/ui`.  
+  • Chat thread, message bubble, model selector, theme toggle.  
+- **Theming**: Light/dark mode persistence per user.  
+- **Deployment**:  
+  • Vercel-ready config.  
+  • Docker standalone output.
 
 ## 5. Tech Stack & Tools
-
-- **Frontend:** Next.js (App Router), React, TypeScript
-- **UI Library:** `shadcn/ui`, Tailwind CSS, `assistant-ui`
-- **AI Integration:** Vercel `@ai-sdk` for chat streaming
-- **Backend:** Next.js API Routes, Node.js/TypeScript
-- **Authentication:** `better-auth` library
-- **Database:** PostgreSQL, Drizzle ORM
-- **Validation:** Zod (env vars and request payloads)
-- **Deployment:** Vercel (primary), Docker (standalone image)
-- **Code Quality:** ESLint, Prettier, Husky (optional git hooks)
-- **IDE Plugins (optional):** Cursor AI, Windsurf for in-editor docs
-- **Future AI Models:** OpenAI GPT-4o, Google Nano Banana
-
----
+- Frontend: **Next.js (App Router)** + **React** + **TypeScript**.  
+- Styling: **Tailwind CSS** + **shadcn/ui** components.  
+- AI Integration: Vercel’s **@ai-sdk** + **assistant-ui** for streaming chat.  
+- Authentication: **better-auth** for server/client flows.  
+- Database: **PostgreSQL** managed via **Drizzle ORM**.  
+- Deployment: **Vercel** + optional **Docker**.  
+- Code Quality: **ESLint**, **Prettier**, **code-guide CLI**.  
+- Potential IDE Plugins: **Cursor.ai** for AI-assisted coding, **Windsurf** for snippet management.
 
 ## 6. Non-Functional Requirements
-
-- **Performance:** 95th percentile chat response time < 1s for short prompts (<50 tokens). UI time-to-interactive < 2s.
-- **Scalability:** Support 1,000 concurrent users with horizontal scaling on Vercel or container clusters.
-- **Security:** HTTPS everywhere, secure HTTP-only cookies, CSRF protection, input sanitization to prevent prompt injection.
-- **Compliance:** GDPR-ready; users can delete their data. Environment keys stored securely.
-- **Usability:** WCAG AA accessibility, responsive design for mobile and desktop, dark/light mode.
-
----
+- **Performance**:  
+  • Chat response streaming latency ≤ 200ms per chunk.  
+  • Page load time (Time to Interactive) < 2s on 3G simulated network.  
+- **Scalability**:  
+  • Support 1,000+ concurrent users without performance degradation.  
+- **Security & Compliance**:  
+  • All credentials via environment variables; no hardcoding.  
+  • Data encryption at rest and in transit (HTTPS + TLS).  
+  • OWASP Top 10 mitigation for web apps.  
+  • GDPR-compatible user data handling (users can delete accounts).  
+- **Usability & Accessibility**:  
+  • WCAG 2.1 AA compliance for core pages.  
+  • Responsive design for mobile, tablet, desktop.  
+- **Reliability**:  
+  • 99.9% uptime SLA on Vercel hosting.  
+  • Automated health checks on API endpoints.
 
 ## 7. Constraints & Assumptions
-
-- **SDK Availability:** Vercel’s `@ai-sdk` is accessible and supports streaming in serverless functions.
-- **Env Vars:** OPENAI_API_KEY (or equivalent) provided at build/deploy time.
-- **Database:** PostgreSQL instance reachable from Vercel; migrations run pre-deploy.
-- **Auth Library:** `better-auth` handles session storage and integrates with Next.js API routes.
-- **Client Browser Support:** Last two versions of major browsers (Chrome, Firefox, Safari, Edge).
-- **Team Skillset:** Familiarity with Next.js, TypeScript, Tailwind, React hooks.
-
----
+- **Dependencies**:  
+  • Vercel’s `@ai-sdk` must be available and support streaming.  
+  • PostgreSQL instance with sufficient connection quota.  
+  • Environment variables set in Vercel or Docker for secrets.  
+- **Assumptions**:  
+  • Users have modern browsers with WebSocket/Fetch support.  
+  • GPT-4 or equivalent OpenAI API access is provisioned via API keys.  
+  • No enterprise SSO or SAML needed in v1.0.
 
 ## 8. Known Issues & Potential Pitfalls
-
-- **API Rate Limits:** Exceeding AI provider limits may cause 429 errors. Mitigation: backoff + user-friendly retry UI.
-- **Serverless Timeouts:** Long-running streams could hit Vercel Function timeouts. Mitigation: limit max tokens, or use background jobs (Inngest) later.
-- **Prompt Injection:** User-supplied prompts might contain malicious instructions. Mitigation: sanitize inputs, enforce content policies.
-- **Schema Mismatches:** Changes in Drizzle ORM schemas can break data consistency. Mitigation: rigorous migration tests and type-safe queries.
-- **Resource Costs:** Streaming multiple users increases API costs. Mitigation: monitor usage, implement rate-limiting per user.
-- **Network Reliability:** Unstable connections can disrupt streaming UI. Mitigation: reconnect logic and partial transcript caching.
-
-
-**End of PRD**
+- **API Rate Limits**:  
+  • Streaming calls to AI models may hit provider rate limits under heavy load.  
+  • Mitigation: Implement retry/backoff logic and per-user throttling.  
+- **Streaming Interruptions**:  
+  • Network hiccups could break the chat stream.  
+  • Mitigation: Buffer partial responses and allow users to resume or retry.  
+- **Database Migrations**:  
+  • Schema changes can conflict in production.  
+  • Mitigation: Use Drizzle’s migration tooling and backup before deploy.  
+- **Type Mismatches**:  
+  • Drizzle ORM schemas vs. API payloads can drift.  
+  • Mitigation: Enforce Zod validation on all incoming requests.  
+- **Mobile UI Limitations**:  
+  • Assistant-UI components may not render optimally on small screens.  
+  • Mitigation: Test and adjust breakpoints and font sizes.
 
 ---
-**Document Details**
-- **Project ID**: 30dd46ec-a9b4-4813-8faa-cc3644b9ca90
-- **Document ID**: 7499ac07-3347-461b-b6db-ac939c8687b4
-- **Type**: custom
-- **Custom Type**: project_requirements_document
-- **Status**: completed
-- **Generated On**: 2025-10-20T04:04:12.508Z
-- **Last Updated**: N/A
+
+This document outlines everything the AI model and developers need to build and extend the Everything-App platform without ambiguity. All future technical documents (Tech Stack details, Frontend Guidelines, Backend Structure, App Flow, File Structure, IDE rules) should reference these requirements directly.

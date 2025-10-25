@@ -7,6 +7,8 @@ import {
 } from "@assistant-ui/react";
 import { useState, useEffect, useCallback } from "react";
 import { useChatModel } from "./chat-model-context";
+import { useChatSearch } from "./chat-search-context";
+import { cacheMessageSources, clearSourcesCache } from "./use-message-sources";
 
 const convertMessage = (message: ThreadMessageLike) => {
   return message;
@@ -17,6 +19,18 @@ interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
   createdAt: string;
+  sources?: Array<{
+    id: string;
+    url: string;
+    title: string;
+    faviconUrl?: string | null;
+    snippet?: string | null;
+  }>;
+}
+
+// Extend ThreadMessageLike to include messageId for tracking
+interface ExtendedThreadMessage extends ThreadMessageLike {
+  messageId?: string;
 }
 
 export function ChatRuntimeProvider({
@@ -25,7 +39,8 @@ export function ChatRuntimeProvider({
   children: React.ReactNode;
 }>) {
   const { selectedModel, sessionId, setSessionId } = useChatModel();
-  const [messages, setMessages] = useState<readonly ThreadMessageLike[]>([]);
+  const { useSearch } = useChatSearch();
+  const [messages, setMessages] = useState<readonly ExtendedThreadMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
 
@@ -35,6 +50,7 @@ export function ChatRuntimeProvider({
       console.log("Starting new chat, clearing messages");
       setMessages([]);
       setLoadedSessionId(null);
+      clearSourcesCache();
       return;
     }
 
@@ -52,11 +68,19 @@ export function ChatRuntimeProvider({
         const response = await fetch(`/api/chat/messages?sessionId=${sessionId}`);
         if (response.ok) {
           const data = await response.json();
-          const loadedMessages: ThreadMessageLike[] = data.messages.map(
-            (msg: ChatMessage) => ({
-              role: msg.role,
-              content: [{ type: "text" as const, text: msg.content }],
-            })
+          const loadedMessages: ExtendedThreadMessage[] = data.messages.map(
+            (msg: ChatMessage) => {
+              // Cache sources for this message if available
+              if (msg.sources && msg.sources.length > 0) {
+                cacheMessageSources(msg.id, msg.sources);
+              }
+
+              return {
+                role: msg.role,
+                content: [{ type: "text" as const, text: msg.content }],
+                messageId: msg.id,
+              };
+            }
           );
           setMessages(loadedMessages);
           setLoadedSessionId(sessionId);
@@ -95,7 +119,7 @@ export function ChatRuntimeProvider({
 
       try {
         // Send message to API using the updated messages
-        console.log("Sending to API with", updatedMessages.length, "messages");
+        console.log("Sending to API with", updatedMessages.length, "messages", useSearch ? "(with search)" : "");
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -105,6 +129,7 @@ export function ChatRuntimeProvider({
             messages: updatedMessages,
             sessionId: sessionId,
             aiModel: selectedModel,
+            useSearch: useSearch,
           }),
         });
 
@@ -188,6 +213,63 @@ export function ChatRuntimeProvider({
           }
 
           console.log("Streaming complete. Final text:", assistantText);
+
+          // Fetch the latest message from the database to get its messageId and sources
+          const currentSessionId = newSessionId || sessionId;
+          if (currentSessionId) {
+            try {
+              console.log("Fetching latest messages to attach messageId and sources");
+              const messagesResponse = await fetch(`/api/chat/messages?sessionId=${currentSessionId}`);
+              if (messagesResponse.ok) {
+                const data = await messagesResponse.json();
+                const dbMessages = data.messages as ChatMessage[];
+
+                // Find the last assistant message in the database
+                const lastAssistantMessage = [...dbMessages]
+                  .reverse()
+                  .find((m: ChatMessage) => m.role === "assistant");
+
+                if (lastAssistantMessage) {
+                  console.log("Found last assistant message:", lastAssistantMessage.id);
+
+                  // Cache sources if available
+                  if (lastAssistantMessage.sources && lastAssistantMessage.sources.length > 0) {
+                    console.log("Caching sources:", lastAssistantMessage.sources.length);
+                    cacheMessageSources(lastAssistantMessage.id, lastAssistantMessage.sources);
+                  }
+
+                  // Update the last assistant message in local state with the messageId
+                  setMessages((currentMessages) => {
+                    // Find the last assistant message in the local state
+                    let lastAssistantIndex = -1;
+                    for (let i = currentMessages.length - 1; i >= 0; i--) {
+                      if (currentMessages[i].role === "assistant") {
+                        lastAssistantIndex = i;
+                        break;
+                      }
+                    }
+
+                    if (lastAssistantIndex === -1) {
+                      console.warn("Could not find last assistant message in local state");
+                      return currentMessages;
+                    }
+
+                    // Create a new array with the updated message
+                    const updatedMessages = [...currentMessages];
+                    updatedMessages[lastAssistantIndex] = {
+                      ...updatedMessages[lastAssistantIndex],
+                      messageId: lastAssistantMessage.id,
+                    } as ExtendedThreadMessage;
+
+                    console.log("Attached messageId to last assistant message:", lastAssistantMessage.id);
+                    return updatedMessages;
+                  });
+                }
+              }
+            } catch (error) {
+              console.error("Failed to fetch latest messages for messageId:", error);
+            }
+          }
         }
       } catch (error) {
         console.error("Chat API error:", error);
@@ -204,7 +286,7 @@ export function ChatRuntimeProvider({
         setMessages((currentMessages) => [...currentMessages, errorMessage]);
       }
     },
-    [sessionId, selectedModel, setSessionId]
+    [sessionId, selectedModel, setSessionId, useSearch]
   );
 
   const runtime = useExternalStoreRuntime<ThreadMessageLike>({

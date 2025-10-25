@@ -10,6 +10,8 @@ import {
   PencilIcon,
   RefreshCwIcon,
   Square,
+  SearchIcon,
+  SettingsIcon,
 } from "lucide-react";
 
 import {
@@ -19,9 +21,11 @@ import {
   ErrorPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useMessage,
 } from "@assistant-ui/react";
 
 import type { FC } from "react";
+import { useState } from "react";
 import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
 import * as m from "motion/react-m";
 
@@ -29,15 +33,21 @@ import { Button } from "@/components/ui/button";
 import { MarkdownText } from "@/components/assistant-ui/markdown-text";
 import { ToolFallback } from "@/components/assistant-ui/tool-fallback";
 import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
+import { SourceCardsGrid } from "@/components/assistant-ui/source-card";
+import { useMessageSources } from "@/app/chat/use-message-sources";
 import {
   ComposerAddAttachment,
   ComposerAttachments,
   UserMessageAttachments,
 } from "@/components/assistant-ui/attachment";
 import { ModelSelector } from "@/components/model-selector";
+import { SettingsDialog } from "@/components/assistant-ui/settings-dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import { cn } from "@/lib/utils";
 import { useChatModel } from "@/app/chat/chat-model-context";
+import { useChatSearch } from "@/app/chat/chat-search-context";
 
 export const Thread: FC = () => {
   return (
@@ -195,50 +205,84 @@ const Composer: FC = () => {
 
 const ComposerAction: FC = () => {
   const { selectedModel, setSelectedModel } = useChatModel();
+  const { useSearch, setUseSearch } = useChatSearch();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
-    <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex flex-wrap items-center justify-between gap-2">
-      <ComposerAddAttachment />
+    <>
+      <div className="aui-composer-action-wrapper relative mx-1 mt-2 mb-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ComposerAddAttachment />
 
-      <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
-        <ModelSelector
-          value={selectedModel}
-          onValueChange={setSelectedModel}
-          variant="inline"
-          className="min-w-[140px] max-w-[220px]"
-        />
-
-        <ThreadPrimitive.If running={false}>
-          <ComposerPrimitive.Send asChild>
-            <TooltipIconButton
-              tooltip="Send message"
-              side="bottom"
-              type="submit"
-              variant="default"
-              size="icon"
-              className="aui-composer-send size-[34px] rounded-full p-1"
-              aria-label="Send message"
+          <div className="flex items-center gap-2 px-2">
+            <Switch
+              id="search-toggle"
+              checked={useSearch}
+              onCheckedChange={setUseSearch}
+              className="scale-90"
+            />
+            <Label
+              htmlFor="search-toggle"
+              className="text-xs text-muted-foreground cursor-pointer flex items-center gap-1"
             >
-              <ArrowUpIcon className="aui-composer-send-icon size-5" />
-            </TooltipIconButton>
-          </ComposerPrimitive.Send>
-        </ThreadPrimitive.If>
+              <SearchIcon className="size-3.5" />
+              Web Search
+            </Label>
+          </div>
 
-        <ThreadPrimitive.If running>
-          <ComposerPrimitive.Cancel asChild>
-            <Button
-              type="button"
-              variant="default"
-              size="icon"
-              className="aui-composer-cancel size-[34px] rounded-full border border-muted-foreground/60 hover:bg-primary/75 dark:border-muted-foreground/90"
-              aria-label="Stop generating"
-            >
-              <Square className="aui-composer-cancel-icon size-3.5 fill-white dark:fill-black" />
-            </Button>
-          </ComposerPrimitive.Cancel>
-        </ThreadPrimitive.If>
+          <TooltipIconButton
+            tooltip="Model Settings"
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <SettingsIcon className="size-4" />
+          </TooltipIconButton>
+        </div>
+
+        <div className="flex flex-1 items-center justify-end gap-2 sm:gap-3">
+          <ModelSelector
+            value={selectedModel}
+            onValueChange={setSelectedModel}
+            variant="inline"
+            className="min-w-[140px] max-w-[220px]"
+          />
+
+          <ThreadPrimitive.If running={false}>
+            <ComposerPrimitive.Send asChild>
+              <TooltipIconButton
+                tooltip="Send message"
+                side="bottom"
+                type="submit"
+                variant="default"
+                size="icon"
+                className="aui-composer-send size-[34px] rounded-full p-1"
+                aria-label="Send message"
+              >
+                <ArrowUpIcon className="aui-composer-send-icon size-5" />
+              </TooltipIconButton>
+            </ComposerPrimitive.Send>
+          </ThreadPrimitive.If>
+
+          <ThreadPrimitive.If running>
+            <ComposerPrimitive.Cancel asChild>
+              <Button
+                type="button"
+                variant="default"
+                size="icon"
+                className="aui-composer-cancel size-[34px] rounded-full border border-muted-foreground/60 hover:bg-primary/75 dark:border-muted-foreground/90"
+                aria-label="Stop generating"
+              >
+                <Square className="aui-composer-cancel-icon size-3.5 fill-white dark:fill-black" />
+              </Button>
+            </ComposerPrimitive.Cancel>
+          </ThreadPrimitive.If>
+        </div>
       </div>
-    </div>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </>
   );
 };
 
@@ -255,26 +299,57 @@ const MessageError: FC = () => {
 const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root asChild>
-      <div
-        className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
-        data-role="assistant"
-      >
-        <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
-          <MessagePrimitive.Parts
-            components={{
-              Text: MarkdownText,
-              tools: { Fallback: ToolFallback },
-            }}
-          />
-          <MessageError />
-        </div>
-
-        <div className="aui-assistant-message-footer mt-2 ml-2 flex">
-          <BranchPicker />
-          <AssistantActionBar />
-        </div>
-      </div>
+      <AssistantMessageContent />
     </MessagePrimitive.Root>
+  );
+};
+
+const AssistantMessageContent: FC = () => {
+  // Access message data through the hook
+  const message = useMessage();
+
+  // Extract messageId from the Symbol(innerMessage) property
+  const innerMessageSymbol = Object.getOwnPropertySymbols(message).find(
+    (sym) => sym.toString() === "Symbol(innerMessage)"
+  );
+  const messageId = innerMessageSymbol
+    ? (message as any)[innerMessageSymbol]?.messageId
+    : undefined;
+
+  const { sources, isLoading } = useMessageSources(messageId);
+
+  return (
+    <div
+      className="aui-assistant-message-root relative mx-auto w-full max-w-[var(--thread-max-width)] animate-in py-4 duration-150 ease-out fade-in slide-in-from-bottom-1 last:mb-24"
+      data-role="assistant"
+    >
+      <div className="aui-assistant-message-content mx-2 leading-7 break-words text-foreground">
+        <MessagePrimitive.Parts
+          components={{
+            Text: MarkdownText,
+            tools: { Fallback: ToolFallback },
+          }}
+        />
+        <MessageError />
+
+        {/* Display source cards if available */}
+        {sources.length > 0 && (
+          <SourceCardsGrid sources={sources} className="mt-4" />
+        )}
+
+        {/* Show loading placeholder when fetching sources */}
+        {isLoading && sources.length === 0 && (
+          <div className="mt-4 text-sm text-muted-foreground animate-pulse">
+            Loading sources...
+          </div>
+        )}
+      </div>
+
+      <div className="aui-assistant-message-footer mt-2 ml-2 flex">
+        <BranchPicker />
+        <AssistantActionBar />
+      </div>
+    </div>
   );
 };
 
