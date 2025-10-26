@@ -1,15 +1,21 @@
 "use client"
 
 import { IconRobot } from "@tabler/icons-react"
+import { ChevronLeft } from "lucide-react"
 
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
-import { ChatSessionManager } from "@/components/chat-session-manager"
+import { Button } from "@/components/ui/button"
 
 import { useChatModel } from "./chat-model-context"
 
-export function ChatHeader() {
-  const { selectedModelConfig, sessionId, setSessionId } = useChatModel()
+interface ChatHeaderProps {
+  sidebarOpen?: boolean
+  onToggleSidebar?: (open: boolean) => void
+}
+
+export function ChatHeader({ sidebarOpen = true, onToggleSidebar }: ChatHeaderProps) {
+  const { selectedModelConfig } = useChatModel()
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -32,12 +38,17 @@ export function ChatHeader() {
             )}
           </div>
         </div>
-        <div className="ml-auto">
-          <ChatSessionManager
-            currentSessionId={sessionId}
-            onSessionChange={setSessionId}
-          />
-        </div>
+        {!sidebarOpen && onToggleSidebar && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onToggleSidebar(true)}
+            className="ml-auto gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            History
+          </Button>
+        )}
       </div>
     </header>
   )
