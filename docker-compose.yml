@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio-server
+    restart: unless-stopped
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Console port
+    volumes:
+      - minio_data:/data
+      - minio_config:/root/.minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BROWSER_REDIRECT_URL=${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - minio-network
+
+  # Optional: MinIO Client for convenience
+  mc:
+    image: quay.io/minio/mc:latest
+    container_name: minio-client
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set minio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123}; do
+        echo 'Waiting for MinIO server...'
+        sleep 1
+      done
+      mc admin info minio
+      "
+    networks:
+      - minio-network
+    profiles:
+      - tools
+
+  # Optional: Create buckets on startup
+  create-buckets:
+    image: quay.io/minio/mc:latest
+    container_name: minio-create-buckets
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set minio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123}; do
+        echo 'Waiting for MinIO server...'
+        sleep 1
+      done
+
+      # Create buckets (customize as needed)
+      mc mb minio/uploads --ignore-existing
+      mc mb minio/backups --ignore-existing
+      mc mb minio/media --ignore-existing
+      mc mb minio/logs --ignore-existing
+
+      # Set bucket policies (customize as needed)
+      mc anonymous set public minio/uploads
+      mc anonymous set download minio/media
+
+      echo 'Buckets created successfully!'
+      "
+    networks:
+      - minio-network
+    profiles:
+      - setup
+
+volumes:
+  minio_data:
+    driver: local
+  minio_config:
+    driver: local
+
+networks:
+  minio-network:
+    driver: bridge

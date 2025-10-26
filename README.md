@@ -98,12 +98,78 @@ POSTGRES_PASSWORD=postgres
 BETTER_AUTH_SECRET=your_secret_key_here
 BETTER_AUTH_URL=http://localhost:3000
 NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
+
+# MinIO Object Storage
+MINIO_ROOT_USER=minioadmin
+MINIO_ROOT_PASSWORD=minioadmin123
+MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+```
+
+## MinIO Object Storage
+
+This project includes MinIO for S3-compatible object storage. Perfect for file uploads, media storage, and data backups.
+
+### Quick Start
+
+```bash
+# Start MinIO server
+docker-compose up minio -d
+
+# Create default buckets (optional)
+docker-compose --profile setup up create-buckets
+```
+
+### Access MinIO
+
+- **API Endpoint**: http://localhost:9000
+- **Web Console**: http://localhost:9001
+- **Default Credentials**: minioadmin / minioadmin123
+
+### Using MinIO Client
+
+```bash
+# Start MinIO client container
+docker-compose --profile tools up mc
+
+# Or use local mc command
+mc alias set local http://localhost:9000 minioadmin minioadmin123
+mc admin info local
+```
+
+### Configuration
+
+The `docker-compose.yml` includes several MinIO services:
+
+- **minio**: Main MinIO server with persistent storage
+- **mc**: Optional MinIO client for convenience (profile: tools)
+- **create-buckets**: Automatic bucket creation (profile: setup)
+
+### Default Buckets
+
+When using the setup profile, these buckets are created:
+- `uploads`: Public bucket for user uploads
+- `backups`: Private bucket for backups
+- `media`: Download-only bucket for media files
+- `logs`: Private bucket for application logs
+
+### Integration
+
+Update your application configuration to use MinIO:
+
+```env
+# MinIO client configuration
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin123
+MINIO_USE_SSL=false
 ```
 
 ## Features
 
 - 🔐 Authentication with Better Auth (email/password)
 - 🗄️ PostgreSQL Database with Drizzle ORM
+- 🗃️ MinIO S3-compatible object storage
 - 🎨 40+ shadcn/ui components (New York style)
 - 🌙 Dark mode with system preference detection
 - 🚀 App Router with Server Components and Turbopack
@@ -209,7 +275,10 @@ The `docker-compose.yml` includes:
 
 - **postgres**: Main PostgreSQL database (port 5432)
 - **postgres-dev**: Development database (port 5433) - use `--profile dev`
+- **minio**: MinIO object storage server (ports 9000, 9001)
 - **app**: Next.js application container (port 3000)
+- **mc**: MinIO client for convenience (profile: tools)
+- **create-buckets**: Automatic bucket creation (profile: setup)
 
 ### Docker Profiles
 
@@ -217,7 +286,16 @@ The `docker-compose.yml` includes:
 # Start development database on port 5433
 docker-compose --profile dev up postgres-dev -d
 
-# Or use the npm script
+# Start MinIO server only
+docker-compose up minio -d
+
+# Start MinIO with client tools
+docker-compose --profile tools up mc minio -d
+
+# Create default buckets automatically
+docker-compose --profile setup up create-buckets minio -d
+
+# Or use the npm scripts
 npm run db:dev
 ```
 
