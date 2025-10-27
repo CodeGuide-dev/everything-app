@@ -51,7 +51,7 @@ const staticData = {
     },
     {
       title: "Image Generation",
-      url: "/image",
+      url: "/images",
       icon: IconPhoto,
     },
     {

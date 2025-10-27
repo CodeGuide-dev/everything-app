@@ -11,7 +11,9 @@ export interface ImageGenerationResult {
     id: string;
     url: string;
     prompt: string;
-    createdAt: Date;
+    createdAt: string;
+    storageKey?: string;
+    storageUrl?: string;
 }
 
 interface ImageChatProps {

@@ -7,11 +7,11 @@ import { AppSidebar } from "@/components/app-sidebar";
 import "@/app/dashboard/theme.css";
 
 export const metadata = {
-  title: "AI Image Generation",
-  description: "Generate stunning images using AI",
+  title: "Image Studio",
+  description: "Iterate on AI generated images with session history.",
 };
 
-export default function ImageLayout({
+export default function ImagesLayout({
   children,
 }: {
   children: React.ReactNode;
