@@ -16,6 +16,7 @@ import {
   IconHelp,
   IconListDetails,
   IconMessageChatbot,
+  IconPhoto,
   IconReport,
   IconSearch,
   IconSettings,
@@ -47,6 +48,11 @@ const staticData = {
       title: "AI Chat",
       url: "/chat",
       icon: IconMessageChatbot,
+    },
+    {
+      title: "Image Generation",
+      url: "/images",
+      icon: IconPhoto,
     },
     {
       title: "Lifecycle",

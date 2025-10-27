@@ -2,6 +2,7 @@ export interface AnalyticsSummary {
   totalUsage: number;
   chatCount: number;
   searchCount: number;
+  imageCount: number;
   avgTokens: number;
   avgInputTokens: number;
   avgOutputTokens: number;
@@ -13,11 +14,12 @@ export interface ChartDataPoint {
   date: string;
   chat: number;
   web_search: number;
+  image_generation: number;
 }
 
 export interface RecentUsage {
   id: string;
-  type: 'chat' | 'web_search';
+  type: 'chat' | 'web_search' | 'image_generation';
   model: string;
   tokens: number;
   inputTokens: number;

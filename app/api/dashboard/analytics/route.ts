@@ -35,7 +35,8 @@ export async function GET(request: Request) {
 
     const chatCount = usageByFeature.find(u => u.featureType === 'chat')?.count || 0;
     const searchCount = usageByFeature.find(u => u.featureType === 'web_search')?.count || 0;
-    const totalUsage = chatCount + searchCount;
+    const imageCount = usageByFeature.find(u => u.featureType === 'image_generation')?.count || 0;
+    const totalUsage = chatCount + searchCount + imageCount;
 
     // Get usage counts from last 30 days for comparison
     const last30DaysUsage = await db
@@ -92,14 +93,14 @@ export async function GET(request: Request) {
       .orderBy(sql`DATE(${aiUsage.createdAt})`);
 
     // Transform daily usage into chart format
-    const chartDataMap = new Map<string, { date: string; chat: number; web_search: number }>();
+    const chartDataMap = new Map<string, { date: string; chat: number; web_search: number; image_generation: number }>();
 
     // Initialize all dates in the range with 0 counts
     for (let i = 0; i < 90; i++) {
       const date = new Date(last90Days);
       date.setDate(date.getDate() + i);
       const dateStr = date.toISOString().split('T')[0];
-      chartDataMap.set(dateStr, { date: dateStr, chat: 0, web_search: 0 });
+      chartDataMap.set(dateStr, { date: dateStr, chat: 0, web_search: 0, image_generation: 0 });
     }
 
     // Fill in actual data
@@ -110,6 +111,8 @@ export async function GET(request: Request) {
           existing.chat = row.count;
         } else if (row.featureType === 'web_search') {
           existing.web_search = row.count;
+        } else if (row.featureType === 'image_generation') {
+          existing.image_generation = row.count;
         }
       }
     });
@@ -154,6 +157,7 @@ export async function GET(request: Request) {
         totalUsage,
         chatCount,
         searchCount,
+        imageCount,
         avgTokens,
         avgInputTokens,
         avgOutputTokens,

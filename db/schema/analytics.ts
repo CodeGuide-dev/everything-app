@@ -3,7 +3,7 @@ import { relations } from "drizzle-orm";
 import { user } from "./auth";
 
 // Enum for AI feature types
-export const aiFeatureTypeEnum = pgEnum("ai_feature_type", ["chat", "web_search"]);
+export const aiFeatureTypeEnum = pgEnum("ai_feature_type", ["chat", "web_search", "image_generation"]);
 
 // AI Usage tracking table
 export const aiUsage = pgTable("ai_usage", {

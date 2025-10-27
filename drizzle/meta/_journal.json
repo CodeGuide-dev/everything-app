@@ -15,6 +15,13 @@
       "when": 1729412400000,
       "tag": "0001_add_api_keys_and_chat_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769020800000,
+      "tag": "0005_expand_image_generation_system",
+      "breakpoints": true
     }
   ]
 }
