@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
-import { db, generatedImages, aiUsage } from "@/db";
+import { db, generatedImages } from "@/db";
 import { uploadImage, generateImageFilename } from "@/lib/s3";
+import { logAIUsage } from "@/lib/analytics/usage-logger";
 import { z } from "zod";
 
 // Allow up to 60 seconds for image generation
@@ -144,16 +145,12 @@ export async function POST(request: Request) {
             );
         }
 
-        // Log usage to ai_usage table
+        // Log usage to analytics
         try {
-            await db.insert(aiUsage).values({
-                userId: session.user.id,
-                feature: 'image_generation',
+            await logAIUsage(session.user.id, "image_generation", {
                 model: modelName,
                 provider: 'google',
-                promptTokens: null,
-                completionTokens: null,
-                totalTokens: null,
+                sessionId: savedImage.id, // Use image ID as session reference
                 requestCount: 1,
             });
             console.log('Logged AI usage');
