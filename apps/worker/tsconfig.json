@@ -1,0 +1,18 @@
+{
+  "extends": "@repo/tsconfig/express.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@repo/db": ["../packages/db"],
+      "@repo/types": ["../packages/types"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

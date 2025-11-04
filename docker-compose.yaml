@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # PostgreSQL Database
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: codeguide-starter-fullstack-postgres
     restart: unless-stopped
     environment:
@@ -18,6 +18,24 @@ services:
     networks:
       - codeguide-starter-fullstack-network
 
+  # Redis for BullMQ
+  redis:
+    image: redis:7-alpine
+    container_name: codeguide-starter-fullstack-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - codeguide-starter-fullstack-network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Next.js Application
   app:
     build:
@@ -28,18 +46,42 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - BETTER_AUTH_SECRET=your-super-secret-key-change-in-production
       - BETTER_AUTH_URL=http://localhost:3000
     ports:
       - "3000:3000"
     depends_on:
       - postgres
+      - redis
+    networks:
+      - codeguide-starter-fullstack-network
+
+  # Express.js Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: codeguide-starter-fullstack-worker
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - WORKER_CONCURRENCY=5
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
     networks:
       - codeguide-starter-fullstack-network
 
   # Development database only
   postgres-dev:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: codeguide-starter-fullstack-postgres-dev
     restart: unless-stopped
     environment:
@@ -50,6 +92,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_dev_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - codeguide-starter-fullstack-network
     profiles:
@@ -71,10 +114,91 @@ services:
     profiles:
       - dev
 
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio-server
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+      - minio_config:/root/.minio
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BROWSER_REDIRECT_URL=${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - codeguide-starter-fullstack-network
+
+  mc:
+    image: quay.io/minio/mc:latest
+    container_name: minio-client
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set minio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123}; do
+        echo 'Waiting for MinIO server...'
+        sleep 1
+      done
+      mc admin info minio
+      "
+    networks:
+      - codeguide-starter-fullstack-network
+    profiles:
+      - tools
+
+  create-buckets:
+    image: quay.io/minio/mc:latest
+    container_name: minio-create-buckets
+    restart: "no"
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set minio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin123}; do
+        echo 'Waiting for MinIO server...'
+        sleep 1
+      done
+
+      # Create buckets (customize as needed)
+      mc mb minio/uploads --ignore-existing
+      mc mb minio/backups --ignore-existing
+      mc mb minio/media --ignore-existing
+      mc mb minio/logs --ignore-existing
+      mc mb minio/documents --ignore-existing
+      mc mb minio/images --ignore-existing
+
+      # Set bucket policies (customize as needed)
+      mc anonymous set public minio/uploads
+      mc anonymous set public minio/documents
+      mc anonymous set download minio/media
+
+      echo 'Buckets created successfully!'
+      "
+    networks:
+      - codeguide-starter-fullstack-network
+    profiles:
+      - setup
+
 volumes:
   postgres_data:
     driver: local
   postgres_dev_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  minio_config:
     driver: local
 
 networks:

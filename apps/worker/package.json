@@ -1,0 +1,40 @@
+{
+  "name": "@repo/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.705.0",
+    "@repo/db": "workspace:*",
+    "@repo/types": "workspace:*",
+    "ai": "^5.0.76",
+    "bullmq": "^5.41.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.5.0",
+    "marked": "^15.0.12",
+    "morgan": "^1.10.0",
+    "pdf-parse": "^1.1.4",
+    "zod": "^4.1.3"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
+    "eslint": "^9",
+    "tsx": "^4.20.5",
+    "typescript": "^5"
+  }
+}
