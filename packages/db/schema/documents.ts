@@ -1,6 +1,6 @@
 import { pgTable, text, integer, timestamp, jsonb, varchar, boolean, vector } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
-import { users } from './auth';
+import { user } from './auth';
 
 // Documents table for storing uploaded files
 export const documents = pgTable('documents', {
@@ -8,8 +8,9 @@ export const documents = pgTable('documents', {
   filename: text('filename').notNull(),
   contentType: varchar('content_type', { length: 50, enum: ['pdf', 'markdown'] }).notNull(),
   size: integer('size').notNull(),
+  storagePath: text('storage_path'), // MinIO/S3 storage path
   status: varchar('status', { length: 50, enum: ['uploading', 'processing', 'completed', 'failed'] }).notNull().default('uploading'),
-  userId: varchar('user_id', { length: 255 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 255 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
   metadata: jsonb('metadata').$type<Record<string, any>>(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -31,7 +32,7 @@ export const jobs = pgTable('jobs', {
   type: varchar('type', { length: 50, enum: ['document_processing'] }).notNull(),
   status: varchar('status', { length: 50, enum: ['pending', 'processing', 'completed', 'failed'] }).notNull().default('pending'),
   progress: integer('progress').notNull().default(0),
-  userId: varchar('user_id', { length: 255 }).notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar('user_id', { length: 255 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
   documentId: varchar('document_id', { length: 255 }).references(() => documents.id, { onDelete: 'set null' }),
   result: jsonb('result').$type<Record<string, any>>(),
   error: text('error'),
@@ -43,9 +44,9 @@ export const jobs = pgTable('jobs', {
 
 // Define relations
 export const documentsRelations = relations(documents, ({ one, many }) => ({
-  user: one(users, {
+  user: one(user, {
     fields: [documents.userId],
-    references: [users.id],
+    references: [user.id],
   }),
   chunks: many(documentChunks),
   jobs: many(jobs),
@@ -59,9 +60,9 @@ export const documentChunksRelations = relations(documentChunks, ({ one }) => ({
 }));
 
 export const jobsRelations = relations(jobs, ({ one }) => ({
-  user: one(users, {
+  user: one(user, {
     fields: [jobs.userId],
-    references: [users.id],
+    references: [user.id],
   }),
   document: one(documents, {
     fields: [jobs.documentId],

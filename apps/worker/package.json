@@ -11,6 +11,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.705.0",
     "@repo/db": "workspace:*",
     "@repo/types": "workspace:*",
     "ai": "^5.0.76",

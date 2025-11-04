@@ -4,6 +4,7 @@ import { Readable } from "node:stream";
 const DEFAULT_ENDPOINT = "http://localhost:9000";
 const DEFAULT_REGION = "us-east-1";
 const DEFAULT_BUCKET = "images";
+const DEFAULT_DOCUMENTS_BUCKET = "documents";
 
 
 // Initialize S3 client for MinIO
@@ -18,6 +19,7 @@ const s3Client = new S3Client({
 });
 
 const BUCKET_NAME = process.env.MINIO_BUCKET || DEFAULT_BUCKET;
+const DOCUMENTS_BUCKET_NAME = process.env.MINIO_DOCUMENTS_BUCKET || DEFAULT_DOCUMENTS_BUCKET;
 
 export interface UploadImageOptions {
     buffer: Buffer;
@@ -193,4 +195,48 @@ function hasArrayBuffer(value: unknown): value is HasArrayBuffer {
  */
 export function generateImageFilename(extension: string = "png"): string {
     return `${crypto.randomUUID()}.${extension}`;
+}
+
+/**
+ * Retrieve a document object from storage and convert it into a buffer
+ * @param storagePath - The storage path of the document (e.g., "documents/{userId}/{documentId}/{filename}")
+ * @returns Promise with buffer, content type, and content length
+ */
+export async function getDocumentObject(storagePath: string): Promise<{
+    buffer: Buffer;
+    contentType: string;
+    contentLength?: number;
+}> {
+    try {
+        const command = new GetObjectCommand({
+            Bucket: DOCUMENTS_BUCKET_NAME,
+            Key: storagePath,
+        });
+
+        const response = await s3Client.send(command);
+
+        if (!response.Body) {
+            throw new Error("Document object returned an empty body");
+        }
+
+        const buffer = await streamBodyToBuffer(response.Body);
+
+        return {
+            buffer,
+            contentType: response.ContentType || "application/octet-stream",
+            contentLength: typeof response.ContentLength === "number" ? response.ContentLength : undefined,
+        };
+    } catch (error) {
+        console.error("Error retrieving document from MinIO:", error);
+        throw error;
+    }
+}
+
+/**
+ * Create the internal proxy URL clients can use to retrieve a document
+ * @param documentId - The document ID
+ * @returns The proxy URL path
+ */
+export function getDocumentProxyUrl(documentId: string): string {
+    return `/api/documents/file/${encodeURIComponent(documentId)}`;
 }

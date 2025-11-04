@@ -1,7 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
-import { embed } from 'ai';
-import { openai } from '@ai-sdk/openai';
 import { VectorSearchService } from '../services/vectorSearch';
 import { logger } from '../utils/logger';
 import { asyncHandler } from '../middleware/errorHandler';
@@ -29,13 +27,34 @@ router.post('/similar', asyncHandler(async (req: Request, res: Response) => {
   const validatedData = searchSchema.parse(req.body);
 
   try {
-    // Generate embedding for the search query
-    const { embeddings } = await embed({
-      model: openai.embedding('text-embedding-3-small'),
-      values: [validatedData.query],
+    // Generate embedding for the search query using direct OpenAI API call
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+      throw new Error('OPENAI_API_KEY not found in environment variables');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openaiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: validatedData.query,
+      }),
     });
 
-    const queryEmbedding = embeddings[0];
+    if (!response.ok) {
+      const errorData = await response.json();
+      logger.error('OpenAI API Error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const queryEmbedding = data.data[0].embedding;
+
+    logger.info('Generated search query embedding successfully');
 
     // Search for similar documents
     const results = await vectorSearch.searchSimilar(queryEmbedding, {

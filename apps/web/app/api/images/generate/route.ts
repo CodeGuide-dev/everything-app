@@ -14,7 +14,7 @@ const generateSchema = z.object({
   sourceAssetId: z.string().min(1).optional(),
   maskAssetId: z.string().min(1).optional(),
   negativePrompt: z.string().min(1).max(2000).optional(),
-  params: z.record(z.any()).optional(),
+  params: z.record(z.string(), z.any()).optional(),
 });
 
 export const maxDuration = 60;

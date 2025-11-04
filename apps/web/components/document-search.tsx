@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
-import { Search, FileText, ExternalLink, Trash2 } from 'lucide-react';
+import { Search, FileText, Trash2, Download, Eye } from 'lucide-react';
 
 interface SearchResult {
   documentId: string;
@@ -134,23 +134,53 @@ export function DocumentSearch({ userId }: DocumentSearchProps) {
 
   const viewDocument = useCallback(async (documentId: string) => {
     try {
-      const response = await fetch(`/api/documents/${documentId}`, {
+      // Fetch PDF and open in a new tab
+      const url = `/api/documents/file/${encodeURIComponent(documentId)}`;
+      const response = await fetch(url, {
         headers: {
           'x-user-id': userId,
         },
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        // You could open a modal or navigate to a document detail page
-        console.log('Document details:', data.document);
-        alert(`Document: ${data.document.filename}\nChunks: ${data.document.chunks.length}\nStatus: ${data.document.status}`);
-      } else {
-        setError(data.error || 'Failed to load document');
+      if (!response.ok) {
+        throw new Error('Failed to load document');
       }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+      // Note: We don't revoke the URL immediately as the new window needs it
+      // The browser will clean it up when the window is closed
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to load document');
+      setError(error instanceof Error ? error.message : 'Failed to view document');
+    }
+  }, [userId]);
+
+  const downloadDocument = useCallback(async (documentId: string, filename: string) => {
+    try {
+      // Download PDF using fetch to include auth headers
+      const url = `/api/documents/file/${encodeURIComponent(documentId)}?download=true`;
+      const response = await fetch(url, {
+        headers: {
+          'x-user-id': userId,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download document');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to download document');
     }
   }, [userId]);
 
@@ -237,15 +267,26 @@ export function DocumentSearch({ userId }: DocumentSearchProps) {
                         <p className="text-sm text-gray-700 line-clamp-3">
                           {result.chunkText}
                         </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => viewDocument(result.documentId)}
-                          className="w-full"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View Document
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => viewDocument(result.documentId)}
+                            className="flex-1"
+                          >
+                            <Eye className="h-4 w-4 mr-2" />
+                            View PDF
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadDocument(result.documentId, result.documentName)}
+                            className="flex-1"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Download
+                          </Button>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -306,18 +347,32 @@ export function DocumentSearch({ userId }: DocumentSearchProps) {
                       <Badge variant={doc.status === 'completed' ? 'default' : 'secondary'}>
                         {doc.status}
                       </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => viewDocument(doc.id)}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
+                      {doc.status === 'completed' && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => viewDocument(doc.id)}
+                            title="View PDF"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => downloadDocument(doc.id, doc.filename)}
+                            title="Download PDF"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => deleteDocument(doc.id)}
                         className="text-red-600 hover:text-red-700"
+                        title="Delete document"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

@@ -82,6 +82,8 @@ export class VectorSearchService {
     filename: string;
     contentType: string;
     status: string;
+    storagePath: string | null;
+    userId: string;
     createdAt: Date;
     chunks: Array<{
       chunkIndex: number;
@@ -114,6 +116,8 @@ export class VectorSearchService {
         filename: document.filename,
         contentType: document.contentType,
         status: document.status,
+        storagePath: document.storagePath || null,
+        userId: document.userId,
         createdAt: document.createdAt,
         chunks: document.chunks,
       };

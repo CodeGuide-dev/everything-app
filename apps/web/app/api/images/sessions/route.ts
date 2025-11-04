@@ -14,7 +14,7 @@ const createSessionSchema = z.object({
   model: z.string().min(1).max(120).optional(),
   prompt: z.string().min(1).max(2000).optional(),
   negativePrompt: z.string().min(1).max(2000).optional(),
-  params: z.record(z.any()).optional(),
+  params: z.record(z.string(), z.any()).optional(),
 });
 
 export const maxDuration = 60;

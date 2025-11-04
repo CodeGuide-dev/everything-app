@@ -7,7 +7,7 @@ const redisConfig = {
   host: process.env.REDIS_HOST || 'localhost',
   port: parseInt(process.env.REDIS_PORT || '6379'),
   password: process.env.REDIS_PASSWORD,
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null,
   retryDelayOnFailover: 100,
 };
 
@@ -37,7 +37,7 @@ const queueOptions: QueueOptions = {
 };
 
 // Worker configuration
-const workerOptions: WorkerOptions = {
+export const workerOptions: WorkerOptions = {
   connection: redisConnection,
   concurrency: parseInt(process.env.WORKER_CONCURRENCY || '5'),
 };
@@ -120,5 +120,3 @@ export async function getJobStatus(jobId: string) {
     throw error;
   }
 }
-
-export { redisConnection, workerOptions };

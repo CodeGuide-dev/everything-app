@@ -100,6 +100,10 @@ export function generateDocumentId(): string {
   return `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+export function generateChunkId(): string {
+  return `chunk_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
 export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB'];
   let size = bytes;

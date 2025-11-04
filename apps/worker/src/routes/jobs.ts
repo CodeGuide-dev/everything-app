@@ -13,7 +13,7 @@ const createJobSchema = z.object({
   filename: z.string().min(1),
   content: z.string().min(1), // Base64 encoded content
   userId: z.string().min(1),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Create a new document processing job
