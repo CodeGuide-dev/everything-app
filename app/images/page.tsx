@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
-import { IconLoader2, IconPhoto, IconPhotoPlus, IconSettings } from "@tabler/icons-react";
+import { IconLoader2, IconPhoto, IconPhotoPlus, IconSettings, IconHistory } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -62,6 +67,10 @@ export default function ImagesLandingPage() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [promptHistory, setPromptHistory] = useState<string[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     if (!isPending) {
@@ -73,6 +82,29 @@ export default function ImagesLandingPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user, isPending]);
+
+  // Load prompt history from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("image-prompt-history");
+      if (saved) {
+        setPromptHistory(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error("Failed to load prompt history:", error);
+    }
+  }, []);
+
+  // Save prompt history to localStorage when it changes
+  useEffect(() => {
+    try {
+      if (promptHistory.length > 0) {
+        localStorage.setItem("image-prompt-history", JSON.stringify(promptHistory));
+      }
+    } catch (error) {
+      console.error("Failed to save prompt history:", error);
+    }
+  }, [promptHistory]);
 
   const fetchSessions = async () => {
     try {
@@ -105,6 +137,9 @@ export default function ImagesLandingPage() {
 
     try {
       setIsSubmitting(true);
+      setGenerationError(null);
+      setGeneratedImageUrl(null);
+
       const payload = {
         provider,
         model,
@@ -121,27 +156,42 @@ export default function ImagesLandingPage() {
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to start generation");
+        throw new Error(data.error || "Failed to generate image");
       }
 
       const data = await response.json();
-      const sessionId = data?.session?.id;
 
-      toast.success("Session created — generating image");
+      if (data.outputAsset?.url) {
+        setGeneratedImageUrl(data.outputAsset.url);
+        toast.success("Image generated successfully!");
+        await fetchSessions(); // Refresh the sessions list
 
-      if (sessionId) {
-        router.push(`/images/${sessionId}`);
+        // Save prompt to history (avoid duplicates and keep last 10)
+        const trimmedPrompt = prompt.trim();
+        setPromptHistory(prev => {
+          const filtered = prev.filter(p => p !== trimmedPrompt);
+          return [trimmedPrompt, ...filtered].slice(0, 10);
+        });
+      } else if (data.session?.id) {
+        // Fallback: if no direct image was generated, navigate to session
+        toast.success("Session created — generating image");
+        router.push(`/images/${data.session.id}`);
       } else {
-        await fetchSessions();
+        throw new Error("No image was generated");
       }
     } catch (error) {
       console.error(error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to start generation",
-      );
+      const errorMessage = error instanceof Error ? error.message : "Failed to generate image";
+      setGenerationError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSelectHistoryPrompt = (historyPrompt: string) => {
+    setPrompt(historyPrompt);
+    setShowHistory(false);
   };
 
   const recentSessions = useMemo(
@@ -202,7 +252,7 @@ export default function ImagesLandingPage() {
             </div>
 
             <div className="w-full max-w-3xl">
-              <form className="relative" onSubmit={handleSubmit}>
+              <form className="relative" onSubmit={handleSubmit} noValidate>
                 <Label className="sr-only" htmlFor="prompt">
                   Describe your image
                 </Label>
@@ -214,8 +264,47 @@ export default function ImagesLandingPage() {
                   rows={8}
                   className="resize-none text-base pr-28 pb-20"
                   disabled={isSubmitting}
+                  aria-describedby="prompt-description"
+                  aria-invalid={!!generationError}
+                  required
+                  minLength={1}
                 />
                 <div className="pointer-events-none absolute inset-x-6 bottom-4 flex items-center justify-end gap-2">
+                  {promptHistory.length > 0 && (
+                    <Popover open={showHistory} onOpenChange={setShowHistory}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="pointer-events-auto h-10 w-10"
+                          disabled={isSubmitting}
+                          aria-label="Show prompt history"
+                          title="Show prompt history"
+                        >
+                          <IconHistory className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-0" align="end">
+                        <div className="p-4">
+                          <h4 className="font-medium mb-2">Recent Prompts</h4>
+                          <div className="space-y-1 max-h-60 overflow-y-auto">
+                            {promptHistory.map((historyPrompt, index) => (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => handleSelectHistoryPrompt(historyPrompt)}
+                                className="w-full text-left p-2 rounded-md hover:bg-muted text-sm truncate focus:outline-none focus:ring-2 focus:ring-primary focus-visible:ring-primary"
+                                title={historyPrompt}
+                              >
+                                {historyPrompt}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button
@@ -224,6 +313,8 @@ export default function ImagesLandingPage() {
                         size="icon"
                         className="pointer-events-auto h-10 w-10"
                         disabled={isSubmitting}
+                        aria-label="Generation settings"
+                        title="Generation settings"
                       >
                         <IconSettings className="h-5 w-5" />
                       </Button>
@@ -282,7 +373,9 @@ export default function ImagesLandingPage() {
                     type="submit"
                     size="icon"
                     className="pointer-events-auto h-10 w-10"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || !prompt.trim()}
+                    aria-label={isSubmitting ? "Generating image" : "Generate image"}
+                    title={isSubmitting ? "Generating image..." : "Generate image"}
                   >
                     {isSubmitting ? (
                       <IconLoader2 className="h-5 w-5 animate-spin" />
@@ -292,7 +385,79 @@ export default function ImagesLandingPage() {
                   </Button>
                 </div>
               </form>
+
+              {/* Screen reader announcements */}
+              <div aria-live="polite" aria-atomic="true" className="sr-only">
+                {isSubmitting && "Generating image, please wait..."}
+                {generatedImageUrl && "Image generated successfully."}
+                {generationError && `Image generation failed: ${generationError}`}
+              </div>
             </div>
+
+            {/* Generated Image Display Section */}
+            {(isSubmitting || generatedImageUrl || generationError) && (
+              <div className="w-full max-w-3xl">
+                {isSubmitting && (
+                  <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-border/60 bg-muted/10 px-6 py-12" role="status" aria-live="polite">
+                    <IconLoader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+                    <div className="text-center">
+                      <h3 className="text-lg font-semibold">Generating image...</h3>
+                      <p className="text-sm text-muted-foreground">
+                        This may take a few moments. Please don't close this page.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {generatedImageUrl && (
+                  <div className="space-y-4" role="region" aria-label="Generated image result">
+                    <div className="rounded-2xl border border-border/60 bg-card overflow-hidden shadow-lg">
+                      <div className="relative aspect-video">
+                        <Image
+                          src={generatedImageUrl}
+                          alt="Generated image from your prompt"
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 1024px) 100vw, 1024px"
+                          priority
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-center">
+                      <Button
+                        onClick={() => {
+                          setGeneratedImageUrl(null);
+                          setGenerationError(null);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        aria-label="Generate another image"
+                      >
+                        Generate Another Image
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {generationError && (
+                  <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-6 text-center" role="alert" aria-live="assertive">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-destructive">Generation Failed</h3>
+                      <p className="text-sm text-destructive/80">{generationError}</p>
+                      <Button
+                        onClick={() => setGenerationError(null)}
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        aria-label="Try generating image again"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
 
           <section className="mx-auto flex w-full max-w-6xl flex-col gap-6">
